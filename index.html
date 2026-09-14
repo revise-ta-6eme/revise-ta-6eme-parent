@@ -2450,6 +2450,52 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
             content.innerHTML='<div class="dashboard-error">Impossible de charger le suivi : '+dashboardEsc(e.message||e)+'</div>';
         }
     }
+    /* =========================================
+       v141 — ÉVALUATIONS EN COURS DE PRÉPARATION
+       ========================================= */
+    const chargerDashboardV141Base = chargerDashboard;
+    chargerDashboard = async function(){
+        await chargerDashboardV141Base();
+        if(!dashboardSelectedProfileId) return;
+        const content=document.getElementById('dashboard-content');
+        if(!content) return;
+        try{
+            const {data,error}=await supabaseClient
+                .from('evaluation_plans')
+                .select('subject_name,target_date,frequency_days,chapters,status,created_at')
+                .eq('profile_id',dashboardSelectedProfileId)
+                .eq('status','PREPARING')
+                .order('target_date',{ascending:true});
+            if(error) throw error;
+            const plans=data||[];
+            const freq={1:'Tous les jours',2:'Tous les 2 jours',3:'Tous les 3 jours',4:'Tous les 4 jours',7:'Une fois par semaine'};
+            const html=plans.length ? plans.map(p=>{
+                const date=p.target_date ? new Date(p.target_date+'T12:00:00').toLocaleDateString('fr-FR') : '—';
+                const chapters=Array.isArray(p.chapters)&&p.chapters.length ? p.chapters.join(' · ') : 'Aucun chapitre indiqué';
+                return `<div class="dashboard-qcm" style="background:#faf9ff;">
+                    <div class="dashboard-qcm-top">
+                        <div>
+                            <div class="dashboard-qcm-title">📚 ${dashboardEsc(p.subject_name||'Matière')}</div>
+                            <div class="dashboard-qcm-meta">Contrôle prévu le ${dashboardEsc(date)}</div>
+                        </div>
+                        <div class="dashboard-qcm-pct">${dashboardEsc(freq[p.frequency_days]||'—')}</div>
+                    </div>
+                    <div class="dashboard-qcm-meta" style="margin-top:7px;"><strong>Chapitres :</strong> ${dashboardEsc(chapters)}</div>
+                </div>`;
+            }).join('') : '<div class="dashboard-empty">Aucun contrôle actuellement en préparation.</div>';
+            content.insertAdjacentHTML('beforeend',`<div class="dashboard-panel" style="margin-top:12px;">
+                <h3>📚 Évaluations en cours de préparation</h3>
+                <p class="dashboard-help">Contrôles préparés depuis l’application.</p>
+                <div class="dashboard-qcms">${html}</div>
+            </div>`);
+        }catch(e){
+            console.error('Évaluations en préparation',e);
+            content.insertAdjacentHTML('beforeend',`<div class="dashboard-panel" style="margin-top:12px;">
+                <h3>📚 Évaluations en cours de préparation</h3>
+                <div class="dashboard-error">Impossible de charger les évaluations préparées.</div>
+            </div>`);
+        }
+    };
 </script>
 
 </body>
