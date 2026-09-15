@@ -1740,7 +1740,7 @@ Tu peux ajouter autant de questions que nécessaire."></textarea>
                             <div class='chapter-name'>${closed ? '🔒 ' : ''}${escapeHtml(chapter)}</div>
                             <div class='chapter-meta'>${groups[ch].length} QCM · ${closed ? 'Chapitre fermé' : 'Chapitre ouvert'}</div>
                         </div>
-                        <button class='${closed ? 'secondary' : 'primary'}' type='button' style='margin:0;padding:8px 11px;font-size:11px;flex:0 0 auto;' onclick='changerStatutChapitre(${JSON.stringify(subjectId)},${JSON.stringify(chapter)},${closed ? 'false' : 'true'})'>${closed ? '↩️ Rouvrir' : '🔒 Fermer'}</button>
+                        <button class='${closed ? 'secondary' : 'primary'}' type='button' style='margin:0;padding:8px 11px;font-size:11px;flex:0 0 auto;' onclick='changerStatutChapitre(${escapeHtml(JSON.stringify(subjectId))},${escapeHtml(JSON.stringify(chapter))},${closed ? 'false' : 'true'})'>${closed ? '↩️ Rouvrir' : '🔒 Fermer'}</button>
                     </div>
                     <div class='chapter-content'>${groups[ch].map(qcmActionRow).join('')}</div>
                 </div>`;
