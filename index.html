@@ -1085,7 +1085,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
             ${savoirs.length ? `<div class='qcm-direct-list'>${savoirs.map(qcm => {
                 const chapterName = String(qcm.title || qcm.chapter || "Sans titre").trim() || "Sans titre";
                 const subjectId = qcm.subject_id || null;
-                const closed = chapitreEstFermeLocal(subjectId, qcm.chapter || chapterName);
+                const closed = chapterEstFermeLocal(subjectId, chapterName);
                 return `<div class='chapter-group'>
                     <div class='chapter-row'>
                       <div class='subject-main'><div class='chapter-name'>${escapeHtml(chapterName)}</div><div class='chapter-meta'>${Number(qcm.question_count||0)} question${Number(qcm.question_count||0)>1?'s':''} · ${closed?'Chapitre fermé':'Chapitre ouvert'}</div></div>
@@ -1795,46 +1795,57 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
     }
 
     async function changerStatutChapitre(subjectId,chapter,actuellementFerme){
-        if(!subjectId || !chapter){afficherQcmMessage('Impossible de modifier ce chapitre : matière ou chapitre introuvable.');return;}
+        if(!subjectId || !chapter){afficherQcmMessage('Impossible de modifier ce QCM : matière ou titre introuvable.');return;}
         const nouveauStatut=!actuellementFerme;
-        const confirmation=actuellementFerme?`Rouvrir le chapitre « ${chapter} » pour les deux enfants ?`:`Fermer le chapitre « ${chapter} » pour les deux enfants ?`;
+        const confirmation=actuellementFerme?`Rouvrir « ${chapter} » pour les deux enfants ?`:`Fermer « ${chapter} » pour les deux enfants ?`;
         if(!confirm(confirmation)) return;
         try{
-            // Ne pas utiliser maybeSingle() : d'anciennes versions ont pu laisser plusieurs lignes
-            // pour un même chapitre. On traite alors toutes les lignes existantes, ce qui permet
-            // notamment de rouvrir les anciens chapitres sans être bloqué par des doublons.
-            const {data:existingRows,error:lookupError}=await supabaseClient.from('chapter_status')
-                .select('subject_id,chapter')
+            // Le QCM est désormais l'unité « chapitre » : on utilise son TITRE comme clé.
+            // Pour les anciens enregistrements, on retrouve aussi la ligne chapter_status
+            // par comparaison normalisée (espaces, apostrophes, casse), afin de pouvoir
+            // rouvrir les chapitres créés avec les anciennes versions.
+            const normaliser = v => String(v || '').trim().toLocaleLowerCase('fr-FR').replace(/[’‘`]/g,"'").replace(/\s+/g,' ');
+            const cible = normaliser(chapter);
+            const {data:allRows,error:lookupError}=await supabaseClient.from('chapter_status')
+                .select('subject_id,chapter,is_closed')
                 .eq('subject_id',subjectId)
-                .eq('chapter',chapter)
-                .limit(100);
+                .limit(500);
             if(lookupError) throw lookupError;
+            const matching=(allRows||[]).filter(r=>normaliser(r.chapter)===cible);
             let error=null;
-            if(existingRows && existingRows.length){
-                ({error}=await supabaseClient.from('chapter_status')
-                    .update({is_closed:nouveauStatut})
-                    .eq('subject_id',subjectId)
-                    .eq('chapter',chapter));
+            if(matching.length){
+                for(const row of matching){
+                    const result=await supabaseClient.from('chapter_status')
+                        .update({is_closed:nouveauStatut})
+                        .eq('subject_id',subjectId)
+                        .eq('chapter',row.chapter);
+                    if(result.error){ error=result.error; break; }
+                }
             }else{
-                ({error}=await supabaseClient.from('chapter_status')
-                    .insert({subject_id:subjectId,chapter:chapter,is_closed:nouveauStatut}));
+                const result=await supabaseClient.from('chapter_status')
+                    .insert({subject_id:subjectId,chapter:chapter,is_closed:nouveauStatut});
+                error=result.error;
             }
             if(error) throw error;
             await chargerChapterStatuses();
             if(librarySubject) renderLibrarySubjectDetail(librarySubject);
-            afficherQcmMessage(nouveauStatut?'Chapitre fermé pour les deux enfants.':'Chapitre rouvert pour les deux enfants.',true);
+            afficherQcmMessage(nouveauStatut?'QCM / chapitre fermé pour les deux enfants.':'QCM / chapitre rouvert pour les deux enfants.',true);
         }catch(e){
             console.error('chapter_status:',e);
-            afficherQcmMessage('Impossible de modifier le statut du chapitre : '+(e.message||e));
+            afficherQcmMessage('Impossible de modifier le statut : '+(e.message||e));
         }
     }
 
     async function chapitreEstFerme(subjectId,chapter){
         const key=chapitreCle(subjectId,chapter);
         if(chapterStatuses[key]===true) return true;
-        const {data,error}=await supabaseClient.from('chapter_status').select('is_closed').eq('subject_id',subjectId).eq('chapter',chapter).maybeSingle();
-        if(!error){chapterStatuses[key]=!!data?.is_closed;return !!data?.is_closed;}
-        return false;
+        const {data,error}=await supabaseClient.from('chapter_status').select('subject_id,chapter,is_closed').eq('subject_id',subjectId).limit(500);
+        if(error) return false;
+        const cible=chapitreCle(subjectId,chapter);
+        const rows=(data||[]).filter(r=>chapitreCle(r.subject_id,r.chapter)===cible);
+        const closed=rows.some(r=>!!r.is_closed);
+        chapterStatuses[key]=closed;
+        return closed;
     }
 
     async function enregistrerQcm() {
