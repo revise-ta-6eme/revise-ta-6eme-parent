@@ -1800,13 +1800,24 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         const confirmation=actuellementFerme?`Rouvrir le chapitre « ${chapter} » pour les deux enfants ?`:`Fermer le chapitre « ${chapter} » pour les deux enfants ?`;
         if(!confirm(confirmation)) return;
         try{
-            const {data:existing,error:lookupError}=await supabaseClient.from('chapter_status').select('subject_id,chapter').eq('subject_id',subjectId).eq('chapter',chapter).maybeSingle();
+            // Ne pas utiliser maybeSingle() : d'anciennes versions ont pu laisser plusieurs lignes
+            // pour un même chapitre. On traite alors toutes les lignes existantes, ce qui permet
+            // notamment de rouvrir les anciens chapitres sans être bloqué par des doublons.
+            const {data:existingRows,error:lookupError}=await supabaseClient.from('chapter_status')
+                .select('subject_id,chapter')
+                .eq('subject_id',subjectId)
+                .eq('chapter',chapter)
+                .limit(100);
             if(lookupError) throw lookupError;
             let error=null;
-            if(existing){
-                ({error}=await supabaseClient.from('chapter_status').update({is_closed:nouveauStatut}).eq('subject_id',subjectId).eq('chapter',chapter));
+            if(existingRows && existingRows.length){
+                ({error}=await supabaseClient.from('chapter_status')
+                    .update({is_closed:nouveauStatut})
+                    .eq('subject_id',subjectId)
+                    .eq('chapter',chapter));
             }else{
-                ({error}=await supabaseClient.from('chapter_status').insert({subject_id:subjectId,chapter:chapter,is_closed:nouveauStatut}));
+                ({error}=await supabaseClient.from('chapter_status')
+                    .insert({subject_id:subjectId,chapter:chapter,is_closed:nouveauStatut}));
             }
             if(error) throw error;
             await chargerChapterStatuses();
