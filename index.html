@@ -278,6 +278,13 @@ button:hover{opacity:.92;transform:translateY(-1px)}
 .chapter-status-action{margin:0;padding:7px 9px;border-radius:9px;font-size:11px;}
 @media(max-width:750px){.chapter-status-row{align-items:flex-start;flex-wrap:wrap;}.chapter-status-state{order:2;}.chapter-status-action{order:3;width:100%;}}
 
+
+    .image-help-card{padding:12px 14px;border:1px dashed var(--border);border-radius:12px;background:#faf9ff;color:var(--muted);font-size:12px;}
+    .image-upload-preview{margin-top:10px;padding:8px;border:1px solid var(--border);border-radius:12px;background:#fafafa;}
+    .image-upload-preview img{display:block;max-width:100%;max-height:180px;margin:0 auto;border-radius:9px;}
+    .question-image-picker{margin-top:10px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:#fafafa;}
+    .question-image-picker small{display:block;color:var(--muted);margin-top:4px;}
+
 </style>
 </head>
 
@@ -443,6 +450,12 @@ button:hover{opacity:.92;transform:translateY(-1px)}
           <label>2️⃣ Coller la question générée</label>
           <textarea id="question-editor-paste" placeholder="Colle ici la question générée par ChatGPT, avec A/B/C/D, Corrigé et éventuellement Explication."></textarea>
         </div>
+        <div class="field" style="margin-top:16px;">
+          <label>🖼️ Image de la question (facultative)</label>
+          <input id="question-editor-image" type="file" accept="image/*" onchange="previewQuestionEditorImage(this)">
+          <div id="question-editor-image-preview" class="image-upload-preview" style="display:none;"></div>
+          <label id="question-editor-remove-image-wrap" class="hint" style="display:none;margin-top:7px;"><input id="question-editor-remove-image" type="checkbox"> Supprimer l’image actuelle</label>
+        </div>
         <div id="question-editor-preview" class="preview" style="display:none;"></div>
         <div class="modal-footer">
           <button class="secondary" type="button" onclick="analyserQuestionEditeur()">🔎 Vérifier la question</button>
@@ -468,6 +481,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
           <div class="field full" id="ai-prompt-field" style="display:none;"><label>2️⃣ Préparer la génération avec ChatGPT</label><div class="qcm-toolbar"><button class="primary" type="button" onclick="lancerGenerationChatGPT()">📋 Copier la consigne et ouvrir ChatGPT</button><button class="secondary" type="button" onclick="togglePromptDetails()">👁️ Voir la consigne</button></div><div id="ai-prompt-details" style="display:none;margin-top:10px;"><div id="ai-prompt-display" class="hint" style="max-height:150px;overflow:auto;white-space:pre-wrap;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafafa;"></div><textarea id="ai-prompt" style="display:none"></textarea></div><p id="ai-help" class="hint">La consigne est préparée automatiquement à partir de tes choix. Elle sera copiée puis ouverte dans ChatGPT.</p></div>
           <div class="field full" id="manual-mode-field" style="display:none;"><label for="qcm-paste">2️⃣ Écrire ou coller les questions</label><textarea id="qcm-paste" placeholder="Écris ou colle ici tes questions, leurs corrigés et, si tu le souhaites, une explication."></textarea><p class="hint">La détection reconnaît la numérotation, A/B/C/D, « Corrigé : A » / « Réponse : A » et « Explication : … ».</p></div>
           <div class="field full" id="generated-questions-field" style="display:none;"><label for="qcm-paste-generated">3️⃣ Questions + corrigés</label><textarea id="qcm-paste-generated" placeholder="Après avoir obtenu le QCM dans ChatGPT, reviens ici et colle uniquement le bloc du QCM."></textarea><p class="hint">Colle ici la réponse de ChatGPT. Les questions peuvent être ajoutées sans limite au QCM.</p></div>
+          <div class="field full" id="qcm-images-help-field" style="display:none;"><div class="image-help-card">🖼️ <strong>Images facultatives</strong><br><span>Après l’analyse, tu pourras associer une image différente à chaque question.</span></div></div>
           <div class="field full" id="analyze-field" style="display:none;"><button class="secondary" type="button" onclick="previsualiserQuestions()">🔎 Analyser les questions</button><div id="qcm-preview" class="preview" style="display:none;"></div></div>
         </div>
         <div class="modal-footer"><button class="secondary" type="button" onclick="fermerQcmModal()">Annuler</button><button id="save-qcm-btn" class="primary" type="button" onclick="enregistrerQcm()" style="display:none;">💾 Créer le QCM</button></div>
@@ -923,6 +937,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
     let qcmEditingId = null;
     let qcmParsedQuestions = [];
     let qcmCreationMode = null;
+    let qcmQuestionImages = [];
     let childProfiles = [];
     let chapterStatuses = {};
     let questionEditorState = {mode:null,qcmId:null,title:"",subject:"",type:"SAVOIR",chapter:"",skill:"",questionId:null,questionNumber:null,existing:[],current:null,prompt:"",parsed:null};
@@ -1447,6 +1462,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
     async function ouvrirCreationQcm() {
         qcmEditingId = null;
         qcmParsedQuestions = [];
+        qcmQuestionImages = [];
         qcmCreationMode = null;
         document.getElementById("qcm-modal-title").textContent = "➕ Créer un QCM";
         document.getElementById("qcm-type").value = "SAVOIR";
@@ -1458,6 +1474,8 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         document.getElementById("qcm-paste-generated").value = "";
         document.querySelectorAll(".qcm-child").forEach(c => c.checked = false);
         document.getElementById("qcm-preview").style.display = "none";
+        qcmQuestionImages = [];
+        document.getElementById("qcm-images-help-field").style.display = "none";
         document.getElementById("chatgpt-mode-field").style.display = "none";
         document.getElementById("manual-mode-field").style.display = "none";
         document.getElementById("ai-prompt-field").style.display = "none";
@@ -1478,7 +1496,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         const {data:qcm,error}=await supabaseClient.from("qcms").select("id,title,chapter,qcm_type,skill_name,subject_id").eq("id",id).maybeSingle();
         if(error||!qcm){afficherQcmMessage("Impossible de charger ce QCM : "+(error?.message||"QCM introuvable"));return;}
         const {data:subject}=await supabaseClient.from("subjects").select("name").eq("id",qcm.subject_id).maybeSingle();
-        const {data:existing}=await supabaseClient.from("questions").select("id,question_number,question_text,choice_a,choice_b,choice_c,choice_d,correct_answer,explanation").eq("qcm_id",id).order("question_number",{ascending:true});
+        const {data:existing}=await supabaseClient.from("questions").select("id,question_number,question_text,choice_a,choice_b,choice_c,choice_d,correct_answer,explanation,image_uri").eq("qcm_id",id).order("question_number",{ascending:true});
         questionEditorState={mode:"add",qcmId:id,title:qcm.title||title||"QCM",subject:subject?.name||"",type:qcm.qcm_type==="SAVOIR_FAIRE"?"SAVOIR-FAIRE":"SAVOIR",chapter:qcm.chapter||qcm.title||title||"",skill:qcm.skill_name||"",questionId:null,questionNumber:null,existing:existing||[],current:null,prompt:"",parsed:null};
         ouvrirQuestionEditeur();
     }
@@ -1490,8 +1508,28 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         const cur=document.getElementById("question-editor-current");
         if(s.mode==="edit"&&s.current){cur.style.display="block";cur.innerHTML=`<strong>Question actuelle</strong><p>${escapeHtml(s.current.question_text||"")}</p><div class="hint">A. ${escapeHtml(s.current.choice_a||"")}<br>B. ${escapeHtml(s.current.choice_b||"")}<br>C. ${escapeHtml(s.current.choice_c||"")}<br>D. ${escapeHtml(s.current.choice_d||"")}<br><strong>Corrigé : ${escapeHtml(s.current.correct_answer||"")}</strong></div>`;}else{cur.style.display="none";cur.innerHTML="";}
         document.getElementById("question-editor-paste").value="";document.getElementById("question-editor-preview").style.display="none";document.getElementById("question-editor-save").style.display="none";document.getElementById("question-prompt-details").style.display="none";
+        const imageInput=document.getElementById("question-editor-image"); if(imageInput) imageInput.value="";
+        const removeWrap=document.getElementById("question-editor-remove-image-wrap"); const removeBox=document.getElementById("question-editor-remove-image");
+        if(removeBox) removeBox.checked=false;
+        const imagePreview=document.getElementById("question-editor-image-preview");
+        if(imagePreview){ imagePreview.style.display="none"; imagePreview.innerHTML=""; }
+        if(s.mode==="edit" && s.current?.image_uri){
+            if(imagePreview){ imagePreview.style.display="block"; imagePreview.innerHTML=`<div class="hint" style="margin-bottom:6px;">Image actuelle</div><img src="${escapeHtml(s.current.image_uri)}" alt="Image actuelle">`; }
+            if(removeWrap) removeWrap.style.display="block";
+        } else if(removeWrap){ removeWrap.style.display="none"; }
         s.prompt=construireConsigneQuestionEditeur();document.getElementById("question-prompt-display").textContent=s.prompt;document.getElementById("question-editor-modal").style.display="flex";
     }
+    function previewQuestionEditorImage(input){
+        const box=document.getElementById("question-editor-image-preview");
+        if(!box) return;
+        const file=input?.files?.[0];
+        if(!file){ box.style.display="none"; box.innerHTML=""; return; }
+        if(!file.type.startsWith("image/")){ input.value=""; box.style.display="block"; box.innerHTML="<strong>⚠️ Choisis un fichier image.</strong>"; return; }
+        if(file.size>8*1024*1024){ input.value=""; box.style.display="block"; box.innerHTML="<strong>⚠️ Image trop volumineuse (8 Mo maximum).</strong>"; return; }
+        const url=URL.createObjectURL(file); box.style.display="block"; box.innerHTML=`<div class="hint" style="margin-bottom:6px;">Nouvelle image</div><img src="${url}" alt="Aperçu">`;
+        const remove=document.getElementById("question-editor-remove-image"); if(remove) remove.checked=false;
+    }
+
     function fermerQuestionEditeur(){document.getElementById("question-editor-modal").style.display="none";}
     function formatQuestionPourPrompt(q){return `${q.question_text||""}
 A. ${q.choice_a||""}
@@ -1531,7 +1569,29 @@ Explication : courte explication pédagogique adaptée à un élève de 6e.`;
     async function lancerGenerationQuestionChatGPT(){const consigne=construireConsigneQuestionEditeur();questionEditorState.prompt=consigne;document.getElementById("question-prompt-display").textContent=consigne;const win=window.open("https://chatgpt.com/?q="+encodeURIComponent(consigne),"_blank");const copied=await copierTexte(consigne);afficherQcmMessage(win?(copied?"✅ ChatGPT est ouvert avec la consigne. Génère la question puis reviens ici et colle-la.":"✅ ChatGPT est ouvert. Copie la consigne affichée si nécessaire."):"⚠️ Safari a bloqué l’ouverture de ChatGPT. La consigne reste visible avec « Voir la consigne ». ",!!win);}
     function toggleQuestionPrompt(){const el=document.getElementById("question-prompt-details");el.style.display=el.style.display==="none"?"block":"none";}
     function analyserQuestionEditeur(){const parsed=parserQuestions(document.getElementById("question-editor-paste").value.trim());const box=document.getElementById("question-editor-preview");if(parsed.length!==1){box.style.display="block";box.innerHTML="<strong>⚠️ Une seule question doit être détectée.</strong><p class='hint'>Utilise le format 1. Question, A/B/C/D, puis « Corrigé : X ».</p>";document.getElementById("question-editor-save").style.display="none";return;}const q=parsed[0];const duplicate=questionEditorState.existing.some(x=>x.id!==questionEditorState.questionId&&(x.question_text||"").trim().toLowerCase()===(q.question||"").trim().toLowerCase());if(duplicate){box.style.display="block";box.innerHTML="<strong>⚠️ Cette question existe déjà dans le QCM.</strong><p class='hint'>Demande à ChatGPT une autre question.</p>";document.getElementById("question-editor-save").style.display="none";return;}questionEditorState.parsed=q;box.style.display="block";box.innerHTML=`<strong>✅ Question prête</strong><div class='preview-item'><div class='preview-q'>${escapeHtml(q.question)}</div><div class='preview-a'>A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)} · C. ${escapeHtml(q.c)} · D. ${escapeHtml(q.d)}<br><strong>Corrigé : ${escapeHtml(q.answer)}</strong>${q.explanation?`<br>Explication : ${escapeHtml(q.explanation)}`:""}</div></div>`;document.getElementById("question-editor-save").style.display="inline-block";}
-    async function enregistrerQuestionEditeur(){const q=questionEditorState.parsed,s=questionEditorState;if(!q){analyserQuestionEditeur();return;}if(s.mode==="edit"){const {error}=await supabaseClient.from("questions").update({question_text:q.question,choice_a:q.a,choice_b:q.b,choice_c:q.c,choice_d:q.d,correct_answer:q.answer,explanation:q.explanation||""}).eq("id",s.questionId);if(error){afficherQcmMessage("Modification impossible : "+error.message);return;}const id=s.qcmId,title=s.title;fermerQuestionEditeur();await chargerQcms();await ouvrirGestionQuestions(id,title);afficherQcmMessage("Question modifiée.",true);}else{const {data:rows,error}=await supabaseClient.from("questions").select("question_number").eq("qcm_id",s.qcmId).order("question_number",{ascending:false}).limit(1);if(error){afficherQcmMessage("Impossible de déterminer le numéro de la nouvelle question : "+error.message);return;}const next=rows&&rows.length?Number(rows[0].question_number)+1:1;const r=await supabaseClient.from("questions").insert({qcm_id:s.qcmId,question_number:next,question_text:q.question,choice_a:q.a,choice_b:q.b,choice_c:q.c,choice_d:q.d,correct_answer:q.answer,explanation:q.explanation||"",image_uri:null});if(r.error){afficherQcmMessage("Ajout impossible : "+r.error.message);return;}const ur=await supabaseClient.from("qcms").update({question_count:next}).eq("id",s.qcmId);if(ur.error)console.error(ur.error);const id=s.qcmId,title=s.title;fermerQuestionEditeur();await chargerQcms();await ouvrirGestionQuestions(id,title);afficherQcmMessage("Question ajoutée.",true);}}
+    async function enregistrerQuestionEditeur(){
+        const q=questionEditorState.parsed,s=questionEditorState;
+        if(!q){analyserQuestionEditeur();return;}
+        const imageFile=document.getElementById("question-editor-image")?.files?.[0]||null;
+        const removeImage=!!document.getElementById("question-editor-remove-image")?.checked;
+        let imageUri=s.current?.image_uri||"";
+        try{
+            if(imageFile) imageUri=await uploadQuestionImage(imageFile,s.qcmId,s.questionNumber||"new");
+            else if(removeImage) imageUri=null;
+            if(s.mode==="edit"){
+                const {error}=await supabaseClient.from("questions").update({question_text:q.question,choice_a:q.a,choice_b:q.b,choice_c:q.c,choice_d:q.d,correct_answer:q.answer,explanation:q.explanation||"",image_uri:imageUri}).eq("id",s.questionId);
+                if(error)throw new Error("Modification impossible : "+error.message);
+            }else{
+                const {data:rows,error}=await supabaseClient.from("questions").select("question_number").eq("qcm_id",s.qcmId).order("question_number",{ascending:false}).limit(1);
+                if(error)throw new Error("Impossible de déterminer le numéro de la nouvelle question : "+error.message);
+                const next=rows&&rows.length?Number(rows[0].question_number)+1:1;
+                const r=await supabaseClient.from("questions").insert({qcm_id:s.qcmId,question_number:next,question_text:q.question,choice_a:q.a,choice_b:q.b,choice_c:q.c,choice_d:q.d,correct_answer:q.answer,explanation:q.explanation||"",image_uri:imageUri});
+                if(r.error)throw new Error("Ajout impossible : "+r.error.message);
+                const ur=await supabaseClient.from("qcms").update({question_count:next}).eq("id",s.qcmId); if(ur.error)console.error(ur.error);
+            }
+            const id=s.qcmId,title=s.title; fermerQuestionEditeur(); await chargerQcms(); await ouvrirGestionQuestions(id,title); afficherQcmMessage(s.mode==="edit"?"Question modifiée.":"Question ajoutée.",true);
+        }catch(e){afficherQcmMessage(e.message||String(e));}
+    }
 
     function fermerQcmModal() {
         document.getElementById("qcm-modal").style.display = "none";
@@ -1558,8 +1618,39 @@ Explication : courte explication pédagogique adaptée à un élève de 6e.`;
         }
         preview.style.display="block";
         document.getElementById("save-qcm-btn").style.display = "inline-block";
+        qcmQuestionImages = qcmParsedQuestions.map((q,i)=>qcmQuestionImages[i]||null);
+        qcmParsedQuestions.forEach((q,i)=>q.imageFile=qcmQuestionImages[i]||null);
+        document.getElementById("qcm-images-help-field").style.display="block";
         preview.innerHTML = `<strong>✅ ${qcmParsedQuestions.length} question(s) détectée(s)</strong>` + qcmParsedQuestions.map((q,i)=>
-          `<div class='preview-item'><div class='preview-q'>${i+1}. ${escapeHtml(q.question)}</div><div class='preview-a'>A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)} · C. ${escapeHtml(q.c)} · D. ${escapeHtml(q.d)}<br><strong>Corrigé : ${q.answer}</strong>${q.explanation ? `<br><span>Explication : ${escapeHtml(q.explanation)}</span>` : ""}</div></div>`).join("");
+          `<div class='preview-item'><div class='preview-q'>${i+1}. ${escapeHtml(q.question)}</div><div class='preview-a'>A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)} · C. ${escapeHtml(q.c)} · D. ${escapeHtml(q.d)}<br><strong>Corrigé : ${q.answer}</strong>${q.explanation ? `<br><span>Explication : ${escapeHtml(q.explanation)}</span>` : ""}</div><div class='question-image-picker'><label><strong>🖼️ Image pour cette question (facultative)</strong><input type='file' accept='image/*' data-qcm-image-index='${i}' onchange='selectionnerImageQuestionQcm(this,${i})'></label><small>PNG, JPG, WEBP — 8 Mo maximum.</small><div id='qcm-image-preview-${i}'></div></div></div>`).join("");
+        qcmParsedQuestions.forEach((q,i)=>{if(qcmQuestionImages[i]) afficherApercuImageQcm(i,qcmQuestionImages[i]);});
+    }
+
+    function selectionnerImageQuestionQcm(input,index){
+        const file=input?.files?.[0]||null;
+        if(file && (!file.type.startsWith("image/") || file.size>8*1024*1024)){
+            input.value=""; qcmQuestionImages[index]=null;
+            afficherQcmMessage(file?.size>8*1024*1024?"Image trop volumineuse : 8 Mo maximum.":"Choisis un fichier image.");
+            afficherApercuImageQcm(index,null); return;
+        }
+        qcmQuestionImages[index]=file; if(qcmParsedQuestions[index]) qcmParsedQuestions[index].imageFile=file; afficherApercuImageQcm(index,file);
+    }
+    function afficherApercuImageQcm(index,file){
+        const box=document.getElementById(`qcm-image-preview-${index}`); if(!box)return;
+        if(!file){box.innerHTML="";return;}
+        const url=URL.createObjectURL(file); box.innerHTML=`<img src="${url}" alt="Aperçu" style="display:block;max-width:100%;max-height:160px;margin-top:8px;border-radius:9px;">`;
+    }
+    async function uploadQuestionImage(file,qcmId,number){
+        if(!file)return null;
+        if(!file.type.startsWith("image/")) throw new Error("Le fichier choisi n’est pas une image.");
+        if(file.size>8*1024*1024) throw new Error("L’image dépasse 8 Mo.");
+        const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
+        const token=(crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random().toString(36).slice(2));
+        const path=`${parentFamilyId}/${qcmId}/${number}-${token}.${ext}`;
+        const {error}=await supabaseClient.storage.from("question-images").upload(path,file,{cacheControl:"3600",upsert:false,contentType:file.type});
+        if(error) throw new Error("Upload de l’image impossible : "+error.message);
+        const {data}=supabaseClient.storage.from("question-images").getPublicUrl(path);
+        return data?.publicUrl||null;
     }
 
     function construireConsigneChatGPT() {
@@ -1756,7 +1847,7 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         document.getElementById("questions-modal").style.display = "flex";
 
         const { data, error } = await supabaseClient.from("questions")
-            .select("id,question_number,question_text,choice_a,choice_b,choice_c,choice_d,correct_answer,explanation")
+            .select("id,question_number,question_text,choice_a,choice_b,choice_c,choice_d,correct_answer,explanation,image_uri")
             .eq("qcm_id", qcmId)
             .order("question_number", { ascending: true });
         if (error) {
@@ -1772,11 +1863,12 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
               <strong>Question ${i + 1}</strong>
               <div class="qcm-actions">
-                <button class="secondary" type="button" onclick='editerQuestion(${JSON.stringify(q.id)}, ${JSON.stringify(q.question_number)}, ${JSON.stringify(q.question_text || "")}, ${JSON.stringify(q.choice_a || "")}, ${JSON.stringify(q.choice_b || "")}, ${JSON.stringify(q.choice_c || "")}, ${JSON.stringify(q.choice_d || "")}, ${JSON.stringify(q.correct_answer || "")}, ${JSON.stringify(q.explanation || "")})'>✏️ Modifier</button>
+                <button class="secondary" type="button" onclick='editerQuestion(${JSON.stringify(q.id)}, ${JSON.stringify(q.question_number)}, ${JSON.stringify(q.question_text || "")}, ${JSON.stringify(q.choice_a || "")}, ${JSON.stringify(q.choice_b || "")}, ${JSON.stringify(q.choice_c || "")}, ${JSON.stringify(q.choice_d || "")}, ${JSON.stringify(q.correct_answer || "")}, ${JSON.stringify(q.explanation || "")}, ${JSON.stringify(q.image_uri || "")})'>✏️ Modifier</button>
                 <button class="danger" type="button" onclick='supprimerQuestion(${JSON.stringify(q.id)}, ${JSON.stringify(q.question_number)}, ${JSON.stringify(qcmId)}, ${JSON.stringify(title)})'>🗑️ Supprimer</button>
               </div>
             </div>
             <p><strong>${escapeHtml(q.question_text || "")}</strong></p>
+            ${q.image_uri ? `<div style="margin:8px 0;"><img src="${escapeHtml(q.image_uri)}" alt="Illustration de la question" style="display:block;max-width:100%;max-height:180px;border-radius:10px;margin:auto;"></div>` : ""}
             <div class="hint">A. ${escapeHtml(q.choice_a || "")}<br>B. ${escapeHtml(q.choice_b || "")}<br>C. ${escapeHtml(q.choice_c || "")}<br>D. ${escapeHtml(q.choice_d || "")}</div>
             <p><strong>Corrigé :</strong> ${escapeHtml(q.correct_answer || "—")}${q.explanation ? `<br><strong>Explication :</strong> ${escapeHtml(q.explanation)}` : ""}</p>
           </article>`).join("");
@@ -1786,13 +1878,13 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         document.getElementById("questions-modal").style.display = "none";
     }
 
-    async function editerQuestion(id, number, question, a, b, c, d, answer, explanation) {
+    async function editerQuestion(id, number, question, a, b, c, d, answer, explanation, imageUri) {
         const qcmId=window.__currentQuestionsQcmId, title=window.__currentQuestionsTitle||"QCM";
         if(!qcmId){afficherQcmMessage("Impossible d’ouvrir l’éditeur de question.");return;}
         const {data:qcm}=await supabaseClient.from("qcms").select("id,title,chapter,qcm_type,skill_name,subject_id").eq("id",qcmId).maybeSingle();
         const {data:subject}=qcm?await supabaseClient.from("subjects").select("name").eq("id",qcm.subject_id).maybeSingle():{data:null};
-        const {data:existing}=await supabaseClient.from("questions").select("id,question_number,question_text,choice_a,choice_b,choice_c,choice_d,correct_answer,explanation").eq("qcm_id",qcmId).order("question_number",{ascending:true});
-        questionEditorState={mode:"edit",qcmId,title:qcm?.title||title,subject:subject?.name||"",type:qcm?.qcm_type==="SAVOIR_FAIRE"?"SAVOIR-FAIRE":"SAVOIR",chapter:qcm?.chapter||title,skill:qcm?.skill_name||"",questionId:id,questionNumber:number,existing:existing||[],current:{id,question_number:number,question_text:question,choice_a:a,choice_b:b,choice_c:c,choice_d:d,correct_answer:answer,explanation},prompt:"",parsed:null};
+        const {data:existing}=await supabaseClient.from("questions").select("id,question_number,question_text,choice_a,choice_b,choice_c,choice_d,correct_answer,explanation,image_uri").eq("qcm_id",qcmId).order("question_number",{ascending:true});
+        questionEditorState={mode:"edit",qcmId,title:qcm?.title||title,subject:subject?.name||"",type:qcm?.qcm_type==="SAVOIR_FAIRE"?"SAVOIR-FAIRE":"SAVOIR",chapter:qcm?.chapter||title,skill:qcm?.skill_name||"",questionId:id,questionNumber:number,existing:existing||[],current:{id,question_number:number,question_text:question,choice_a:a,choice_b:b,choice_c:c,choice_d:d,correct_answer:answer,explanation,image_uri:imageUri||((existing||[]).find(x=>x.id===id)?.image_uri||"")},prompt:"",parsed:null};
         ouvrirQuestionEditeur();
     }
 
@@ -1963,7 +2055,12 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
     }
 
     async function ajouterQuestionsAuQcm(qcmId, questions, startNumber) {
-        const rows = questions.map((q,i)=>({qcm_id:qcmId,question_number:startNumber+i,question_text:q.question,choice_a:q.a,choice_b:q.b,choice_c:q.c,choice_d:q.d,correct_answer:q.answer,explanation:q.explanation || "",image_uri:null}));
+        const rows=[];
+        for(let i=0;i<questions.length;i++){
+            const q=questions[i];
+            const imageUri=q.imageFile?await uploadQuestionImage(q.imageFile,qcmId,startNumber+i):null;
+            rows.push({qcm_id:qcmId,question_number:startNumber+i,question_text:q.question,choice_a:q.a,choice_b:q.b,choice_c:q.c,choice_d:q.d,correct_answer:q.answer,explanation:q.explanation||"",image_uri:imageUri});
+        }
         const { error } = await supabaseClient.from("questions").insert(rows);
         if (error) throw new Error(error.message);
     }
