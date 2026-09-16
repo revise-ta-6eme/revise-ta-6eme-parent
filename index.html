@@ -427,6 +427,31 @@ button:hover{opacity:.92;transform:translateY(-1px)}
       </div>
     </div>
 
+    <div id="question-editor-modal" class="modal-backdrop" style="display:none;">
+      <div class="modal" style="max-width:900px;">
+        <h2 id="question-editor-title">🤖 Ajouter une question</h2>
+        <p id="question-editor-context" class="card-intro"></p>
+        <div id="question-editor-current" class="preview" style="display:none;margin-bottom:12px;"></div>
+        <div class="field">
+          <label>1️⃣ Créer la question avec ChatGPT</label>
+          <button class="primary" type="button" onclick="lancerGenerationQuestionChatGPT()">🤖 Copier la consigne et ouvrir ChatGPT</button>
+          <button class="secondary" type="button" onclick="toggleQuestionPrompt()">👁️ Voir la consigne</button>
+          <div id="question-prompt-details" style="display:none;margin-top:10px;"><div id="question-prompt-display" class="hint" style="max-height:220px;overflow:auto;white-space:pre-wrap;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafafa;"></div></div>
+          <p class="hint">La consigne contient les questions déjà présentes dans ce QCM afin d’éviter les répétitions.</p>
+        </div>
+        <div class="field" style="margin-top:16px;">
+          <label>2️⃣ Coller la question générée</label>
+          <textarea id="question-editor-paste" placeholder="Colle ici la question générée par ChatGPT, avec A/B/C/D, Corrigé et éventuellement Explication."></textarea>
+        </div>
+        <div id="question-editor-preview" class="preview" style="display:none;"></div>
+        <div class="modal-footer">
+          <button class="secondary" type="button" onclick="analyserQuestionEditeur()">🔎 Vérifier la question</button>
+          <button class="secondary" type="button" onclick="fermerQuestionEditeur()">Annuler</button>
+          <button id="question-editor-save" class="primary" type="button" onclick="enregistrerQuestionEditeur()" style="display:none;">💾 Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
     <div id="qcm-modal" class="modal-backdrop">
       <div class="modal">
         <h2 id="qcm-modal-title">➕ Créer un QCM</h2>
@@ -900,6 +925,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
     let qcmCreationMode = null;
     let childProfiles = [];
     let chapterStatuses = {};
+    let questionEditorState = {mode:null,qcmId:null,title:"",subject:"",type:"SAVOIR",chapter:"",skill:"",questionId:null,questionNumber:null,existing:[],current:null,prompt:"",parsed:null};
 
     function afficherQcmMessage(texte, succes=false) {
         const el = document.getElementById("qcm-message");
@@ -1085,12 +1111,11 @@ button:hover{opacity:.92;transform:translateY(-1px)}
             ${savoirs.length ? `<div class='qcm-direct-list'>${savoirs.map(qcm => {
                 const chapterName = String(qcm.title || qcm.chapter || "Sans titre").trim() || "Sans titre";
                 const subjectId = qcm.subject_id || null;
-                const legacyChapter = String(qcm.chapter || '').trim();
-                const closed = chapterEstFermeLocal(subjectId, chapterName) || (legacyChapter && chapterEstFermeLocal(subjectId, legacyChapter));
+                const closed = chapterEstFermeLocal(subjectId, chapterName);
                 return `<div class='chapter-group'>
                     <div class='chapter-row'>
                       <div class='subject-main'><div class='chapter-name'>${escapeHtml(chapterName)}</div><div class='chapter-meta'>${Number(qcm.question_count||0)} question${Number(qcm.question_count||0)>1?'s':''} · ${closed?'Chapitre fermé':'Chapitre ouvert'}</div></div>
-                      <div class='chapter-header-actions'><span class='chapter-status-state ${closed?'closed':'open'}'>${closed?'Fermé':'Ouvert'}</span><button class='secondary chapter-status-action' type='button' onclick='changerStatutChapitre(${JSON.stringify(subjectId)},${JSON.stringify(chapterName)},${JSON.stringify(legacyChapter)},${closed})'>${closed?'↩️ Rouvrir':'🔒 Fermer'}</button></div>
+                      <div class='chapter-header-actions'><span class='chapter-status-state ${closed?'closed':'open'}'>${closed?'Fermé':'Ouvert'}</span><button class='secondary chapter-status-action' type='button' onclick='changerStatutChapitre(${JSON.stringify(subjectId)},${JSON.stringify(qcm.chapter || chapterName)},${closed})'>${closed?'↩️ Rouvrir':'🔒 Fermer'}</button></div>
                     </div>
                     <div class='chapter-content'>${qcmActionRow(qcm)}</div>
                 </div>`;
@@ -1449,31 +1474,64 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         document.getElementById("qcm-modal").style.display = "flex";
     }
 
-    function ouvrirAjoutQuestions(id, title) {
-        qcmEditingId = id;
-        qcmParsedQuestions = [];
-        qcmCreationMode = "manuel";
-        document.getElementById("qcm-modal-title").textContent = "➕ Ajouter des questions à « " + title + " »";
-        document.getElementById("qcm-paste").value = "";
-        document.getElementById("qcm-paste-generated").value = "";
-        document.getElementById("qcm-preview").style.display = "none";
-        document.getElementById("qcm-type").disabled = true;
-        document.getElementById("qcm-subject").disabled = true;
-        document.getElementById("qcm-chapter").disabled = true;
-        document.getElementById("qcm-skill").disabled = true;
-        document.getElementById("qcm-skill-category").disabled = true;
-        document.getElementById("qcm-title").disabled = true;
-        document.querySelectorAll(".qcm-child").forEach(c => c.disabled = true);
-        document.getElementById("mode-chatgpt-btn").style.display = "none";
-        document.getElementById("mode-manuel-btn").style.display = "inline-block";
-        document.getElementById("chatgpt-mode-field").style.display = "none";
-        document.getElementById("manual-mode-field").style.display = "block";
-        document.getElementById("ai-prompt-field").style.display = "none";
-        document.getElementById("generated-questions-field").style.display = "none";
-        document.getElementById("analyze-field").style.display = "block";
-        document.getElementById("mode-manuel-btn").className = "primary";
-        document.getElementById("qcm-modal").style.display = "flex";
+    async function ouvrirAjoutQuestions(id, title) {
+        const {data:qcm,error}=await supabaseClient.from("qcms").select("id,title,chapter,qcm_type,skill_name,subject_id").eq("id",id).maybeSingle();
+        if(error||!qcm){afficherQcmMessage("Impossible de charger ce QCM : "+(error?.message||"QCM introuvable"));return;}
+        const {data:subject}=await supabaseClient.from("subjects").select("name").eq("id",qcm.subject_id).maybeSingle();
+        const {data:existing}=await supabaseClient.from("questions").select("id,question_number,question_text,choice_a,choice_b,choice_c,choice_d,correct_answer,explanation").eq("qcm_id",id).order("question_number",{ascending:true});
+        questionEditorState={mode:"add",qcmId:id,title:qcm.title||title||"QCM",subject:subject?.name||"",type:qcm.qcm_type==="SAVOIR_FAIRE"?"SAVOIR-FAIRE":"SAVOIR",chapter:qcm.chapter||qcm.title||title||"",skill:qcm.skill_name||"",questionId:null,questionNumber:null,existing:existing||[],current:null,prompt:"",parsed:null};
+        ouvrirQuestionEditeur();
     }
+
+    async function ouvrirQuestionEditeur(){
+        const s=questionEditorState;
+        document.getElementById("question-editor-title").textContent=s.mode==="edit"?"🤖 Remplacer une question":"🤖 Ajouter une question";
+        document.getElementById("question-editor-context").textContent=`${s.subject||"Matière"} • ${s.title||s.chapter||"QCM"}${s.skill?" • "+s.skill:""} • niveau 6e`;
+        const cur=document.getElementById("question-editor-current");
+        if(s.mode==="edit"&&s.current){cur.style.display="block";cur.innerHTML=`<strong>Question actuelle</strong><p>${escapeHtml(s.current.question_text||"")}</p><div class="hint">A. ${escapeHtml(s.current.choice_a||"")}<br>B. ${escapeHtml(s.current.choice_b||"")}<br>C. ${escapeHtml(s.current.choice_c||"")}<br>D. ${escapeHtml(s.current.choice_d||"")}<br><strong>Corrigé : ${escapeHtml(s.current.correct_answer||"")}</strong></div>`;}else{cur.style.display="none";cur.innerHTML="";}
+        document.getElementById("question-editor-paste").value="";document.getElementById("question-editor-preview").style.display="none";document.getElementById("question-editor-save").style.display="none";document.getElementById("question-prompt-details").style.display="none";
+        s.prompt=construireConsigneQuestionEditeur();document.getElementById("question-prompt-display").textContent=s.prompt;document.getElementById("question-editor-modal").style.display="flex";
+    }
+    function fermerQuestionEditeur(){document.getElementById("question-editor-modal").style.display="none";}
+    function formatQuestionPourPrompt(q){return `${q.question_text||""}
+A. ${q.choice_a||""}
+B. ${q.choice_b||""}
+C. ${q.choice_c||""}
+D. ${q.choice_d||""}
+Corrigé : ${q.correct_answer||""}`;}
+    function construireConsigneQuestionEditeur(){
+        const s=questionEditorState;const existing=s.existing.filter(q=>s.mode!=="edit"||q.id!==s.questionId);const liste=existing.length?existing.map((q,i)=>`${i+1}. ${formatQuestionPourPrompt(q)}`).join("\n\n"):"Aucune question existante.";const current=s.current?`\n\nQUESTION ACTUELLE À REMPLACER :\n${formatQuestionPourPrompt(s.current)}`:"";
+        return `Crée UNE SEULE question de QCM de niveau 6e.
+
+Matière : ${s.subject||"non précisée"}
+Type : ${s.type}
+Thème / chapitre / titre du QCM : « ${s.title||s.chapter||"non précisé"} »
+${s.skill?`Savoir-faire : « ${s.skill} »\n`:""}
+La question doit être strictement adaptée au niveau 6e et porter sur le thème indiqué. Elle doit comporter exactement 4 réponses A, B, C et D, avec une seule bonne réponse.
+
+IMPORTANT — NE RÉPÈTE PAS LES QUESTIONS EXISTANTES
+La question doit être réellement différente de toutes les questions listées ci-dessous : pas de reformulation quasi identique, pas le même exemple, pas la même situation et pas les mêmes réponses. Choisis un autre angle, une autre donnée ou une autre application du thème.
+
+QUESTIONS DÉJÀ PRÉSENTES DANS CE QCM :
+${liste}${current}
+
+IMPORTANT — UTILISATION DU COURS FOURNI
+Si je joins un cours, des photos ou un document, utilise-les comme source principale. N’invente aucune information absente ou illisible et reste strictement dans les notions enseignées.
+
+FORMAT DE RÉPONSE
+Réponds uniquement avec UNE question, dans un seul bloc de code Markdown, exactement sous cette forme :
+1. Question
+A. Réponse A
+B. Réponse B
+C. Réponse C
+D. Réponse D
+Corrigé : X
+Explication : courte explication pédagogique adaptée à un élève de 6e.`;
+    }
+    async function lancerGenerationQuestionChatGPT(){const consigne=construireConsigneQuestionEditeur();questionEditorState.prompt=consigne;document.getElementById("question-prompt-display").textContent=consigne;const win=window.open("https://chatgpt.com/?q="+encodeURIComponent(consigne),"_blank");const copied=await copierTexte(consigne);afficherQcmMessage(win?(copied?"✅ ChatGPT est ouvert avec la consigne. Génère la question puis reviens ici et colle-la.":"✅ ChatGPT est ouvert. Copie la consigne affichée si nécessaire."):"⚠️ Safari a bloqué l’ouverture de ChatGPT. La consigne reste visible avec « Voir la consigne ». ",!!win);}
+    function toggleQuestionPrompt(){const el=document.getElementById("question-prompt-details");el.style.display=el.style.display==="none"?"block":"none";}
+    function analyserQuestionEditeur(){const parsed=parserQuestions(document.getElementById("question-editor-paste").value.trim());const box=document.getElementById("question-editor-preview");if(parsed.length!==1){box.style.display="block";box.innerHTML="<strong>⚠️ Une seule question doit être détectée.</strong><p class='hint'>Utilise le format 1. Question, A/B/C/D, puis « Corrigé : X ».</p>";document.getElementById("question-editor-save").style.display="none";return;}const q=parsed[0];const duplicate=questionEditorState.existing.some(x=>x.id!==questionEditorState.questionId&&(x.question_text||"").trim().toLowerCase()===(q.question||"").trim().toLowerCase());if(duplicate){box.style.display="block";box.innerHTML="<strong>⚠️ Cette question existe déjà dans le QCM.</strong><p class='hint'>Demande à ChatGPT une autre question.</p>";document.getElementById("question-editor-save").style.display="none";return;}questionEditorState.parsed=q;box.style.display="block";box.innerHTML=`<strong>✅ Question prête</strong><div class='preview-item'><div class='preview-q'>${escapeHtml(q.question)}</div><div class='preview-a'>A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)} · C. ${escapeHtml(q.c)} · D. ${escapeHtml(q.d)}<br><strong>Corrigé : ${escapeHtml(q.answer)}</strong>${q.explanation?`<br>Explication : ${escapeHtml(q.explanation)}`:""}</div></div>`;document.getElementById("question-editor-save").style.display="inline-block";}
+    async function enregistrerQuestionEditeur(){const q=questionEditorState.parsed,s=questionEditorState;if(!q){analyserQuestionEditeur();return;}if(s.mode==="edit"){const {error}=await supabaseClient.from("questions").update({question_text:q.question,choice_a:q.a,choice_b:q.b,choice_c:q.c,choice_d:q.d,correct_answer:q.answer,explanation:q.explanation||""}).eq("id",s.questionId);if(error){afficherQcmMessage("Modification impossible : "+error.message);return;}const id=s.qcmId,title=s.title;fermerQuestionEditeur();await chargerQcms();await ouvrirGestionQuestions(id,title);afficherQcmMessage("Question modifiée.",true);}else{const {data:rows,error}=await supabaseClient.from("questions").select("question_number").eq("qcm_id",s.qcmId).order("question_number",{ascending:false}).limit(1);if(error){afficherQcmMessage("Impossible de déterminer le numéro de la nouvelle question : "+error.message);return;}const next=rows&&rows.length?Number(rows[0].question_number)+1:1;const r=await supabaseClient.from("questions").insert({qcm_id:s.qcmId,question_number:next,question_text:q.question,choice_a:q.a,choice_b:q.b,choice_c:q.c,choice_d:q.d,correct_answer:q.answer,explanation:q.explanation||"",image_uri:null});if(r.error){afficherQcmMessage("Ajout impossible : "+r.error.message);return;}const ur=await supabaseClient.from("qcms").update({question_count:next}).eq("id",s.qcmId);if(ur.error)console.error(ur.error);const id=s.qcmId,title=s.title;fermerQuestionEditeur();await chargerQcms();await ouvrirGestionQuestions(id,title);afficherQcmMessage("Question ajoutée.",true);}}
 
     function fermerQcmModal() {
         document.getElementById("qcm-modal").style.display = "none";
@@ -1691,6 +1749,7 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
     }
 
     async function ouvrirGestionQuestions(qcmId, title) {
+        window.__currentQuestionsQcmId=qcmId; window.__currentQuestionsTitle=title;
         document.getElementById("questions-modal-title").textContent = "📝 Questions de « " + title + " »";
         const box = document.getElementById("questions-list-container");
         box.innerHTML = "<p class='card-intro'>Chargement des questions…</p>";
@@ -1727,18 +1786,14 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         document.getElementById("questions-modal").style.display = "none";
     }
 
-    function editerQuestion(id, number, question, a, b, c, d, answer, explanation) {
-        const q = prompt("Énoncé de la question :", question);
-        if (q === null) return;
-        const qa = prompt("Réponse A :", a); if (qa === null) return;
-        const qb = prompt("Réponse B :", b); if (qb === null) return;
-        const qc = prompt("Réponse C :", c); if (qc === null) return;
-        const qd = prompt("Réponse D :", d); if (qd === null) return;
-        let corr = prompt("Bonne réponse (A, B, C ou D) :", answer); if (corr === null) return;
-        corr = corr.trim().toUpperCase();
-        if (!["A","B","C","D"].includes(corr)) { afficherQcmMessage("Le corrigé doit être A, B, C ou D."); return; }
-        const exp = prompt("Explication (facultative) :", explanation || ""); if (exp === null) return;
-        enregistrerModificationQuestion(id, number, q.trim(), qa.trim(), qb.trim(), qc.trim(), qd.trim(), corr, exp.trim());
+    async function editerQuestion(id, number, question, a, b, c, d, answer, explanation) {
+        const qcmId=window.__currentQuestionsQcmId, title=window.__currentQuestionsTitle||"QCM";
+        if(!qcmId){afficherQcmMessage("Impossible d’ouvrir l’éditeur de question.");return;}
+        const {data:qcm}=await supabaseClient.from("qcms").select("id,title,chapter,qcm_type,skill_name,subject_id").eq("id",qcmId).maybeSingle();
+        const {data:subject}=qcm?await supabaseClient.from("subjects").select("name").eq("id",qcm.subject_id).maybeSingle():{data:null};
+        const {data:existing}=await supabaseClient.from("questions").select("id,question_number,question_text,choice_a,choice_b,choice_c,choice_d,correct_answer,explanation").eq("qcm_id",qcmId).order("question_number",{ascending:true});
+        questionEditorState={mode:"edit",qcmId,title:qcm?.title||title,subject:subject?.name||"",type:qcm?.qcm_type==="SAVOIR_FAIRE"?"SAVOIR-FAIRE":"SAVOIR",chapter:qcm?.chapter||title,skill:qcm?.skill_name||"",questionId:id,questionNumber:number,existing:existing||[],current:{id,question_number:number,question_text:question,choice_a:a,choice_b:b,choice_c:c,choice_d:d,correct_answer:answer,explanation},prompt:"",parsed:null};
+        ouvrirQuestionEditeur();
     }
 
     async function enregistrerModificationQuestion(id, number, question, a, b, c, d, answer, explanation) {
@@ -1795,21 +1850,24 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         (statuses||[]).forEach(x=>{chapterStatuses[chapitreCle(x.subject_id,x.chapter)]=!!x.is_closed;});
     }
 
-    async function changerStatutChapitre(subjectId,chapter,legacyChapter,actuellementFerme){
+    async function changerStatutChapitre(subjectId,chapter,actuellementFerme){
         if(!subjectId || !chapter){afficherQcmMessage('Impossible de modifier ce QCM : matière ou titre introuvable.');return;}
         const nouveauStatut=!actuellementFerme;
         const confirmation=actuellementFerme?`Rouvrir « ${chapter} » pour les deux enfants ?`:`Fermer « ${chapter} » pour les deux enfants ?`;
         if(!confirm(confirmation)) return;
         try{
+            // Le QCM est désormais l'unité « chapitre » : on utilise son TITRE comme clé.
+            // Pour les anciens enregistrements, on retrouve aussi la ligne chapter_status
+            // par comparaison normalisée (espaces, apostrophes, casse), afin de pouvoir
+            // rouvrir les chapitres créés avec les anciennes versions.
             const normaliser = v => String(v || '').trim().toLocaleLowerCase('fr-FR').replace(/[’‘`]/g,"'").replace(/\s+/g,' ');
-            const cibles = new Set([normaliser(chapter), normaliser(legacyChapter)]);
-            cibles.delete('');
+            const cible = normaliser(chapter);
             const {data:allRows,error:lookupError}=await supabaseClient.from('chapter_status')
                 .select('subject_id,chapter,is_closed')
                 .eq('subject_id',subjectId)
                 .limit(500);
             if(lookupError) throw lookupError;
-            const matching=(allRows||[]).filter(r=>cibles.has(normaliser(r.chapter)));
+            const matching=(allRows||[]).filter(r=>normaliser(r.chapter)===cible);
             let error=null;
             if(matching.length){
                 for(const row of matching){
