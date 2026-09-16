@@ -225,7 +225,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
 .sf-taxonomy-list{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff}.sf-taxonomy-category{border-bottom:1px solid #ECEAF3}.sf-taxonomy-category:last-child{border-bottom:0}
 .sf-taxonomy-head{display:flex;align-items:center;gap:9px;padding:10px 12px;background:#FBFCFE}.sf-color{width:11px;height:11px;border-radius:50%;border:1px solid rgba(0,0,0,.12);flex:0 0 auto}.sf-taxonomy-name{font-weight:850;color:#353145;flex:1;min-width:0}.sf-taxonomy-actions{display:flex;gap:5px;flex-wrap:wrap}.sf-taxonomy-actions button{margin:0;padding:6px 8px;border-radius:8px;font-size:10px}
 .sf-taxonomy-sub{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 34px;border-top:1px solid #F0F1F5}.sf-taxonomy-sub .sf-taxonomy-name{font-size:12px;font-weight:750}.sf-qcm-inline{padding:0 12px 7px 56px}.taxonomy-empty{padding:15px;text-align:center;color:var(--muted);background:#FCFDFF}
-.taxonomy-modal-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:end} .taxonomy-inline-trigger{margin-top:7px;width:100%;justify-content:center} .taxonomy-inline-form{margin-top:9px;padding:14px;border:1px solid #D9DEE8;border-radius:12px;background:#FCFDFF;box-shadow:0 3px 10px rgba(14,31,58,.05)} .taxonomy-inline-title{font-weight:850;color:var(--navy);margin-bottom:10px} .taxonomy-inline-grid{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:end} .taxonomy-inline-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.taxonomy-modal-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:end} .taxonomy-color-wrap input[type="color"]{width:100%;height:44px;padding:3px;cursor:pointer;display:block} .taxonomy-inline-trigger{margin-top:7px;width:100%;justify-content:center} .taxonomy-inline-form{margin-top:9px;padding:14px;border:1px solid #D9DEE8;border-radius:12px;background:#FCFDFF;box-shadow:0 3px 10px rgba(14,31,58,.05)} .taxonomy-inline-title{font-weight:850;color:var(--navy);margin-bottom:10px} .taxonomy-inline-grid{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:end} .taxonomy-inline-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 .modal-backdrop{position:fixed;inset:0;background:rgba(14,31,58,.48);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
 .modal{width:min(900px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:17px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.20)}
 .modal h2{margin-top:0;color:var(--navy)}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid .full{grid-column:1/-1}
@@ -1178,7 +1178,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         const color=document.getElementById('taxonomy-color').value;
         if(!name){ afficherQcmMessage('Indique un nom.'); return; }
         if(taxonomyEditId){
-            const {error}=await supabaseClient.from('skill_taxonomy').update({name,color,updated_at:new Date().toISOString()}).eq('id',taxonomyEditId);
+            const {error}=await supabaseClient.from('skill_taxonomy').update({name,color}).eq('id',taxonomyEditId);
             if(error){ afficherQcmMessage('Modification impossible : '+error.message); return; }
         } else {
             const siblings=skillTaxonomy.filter(x=>x.subject_id===taxonomySubjectId && x.parent_id===taxonomyParentId);
@@ -1316,7 +1316,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         if(type==='skill'&&!parentId){afficherQcmMessage('Choisis d’abord une catégorie de savoir-faire.');return;}
         const siblings=skillTaxonomy.filter(x=>String(x.subject_id)===String(subjectId)&&String(x.parent_id||'')===String(parentId||''));
         const maxOrder=siblings.reduce((m,x)=>Math.max(m,Number(x.sort_order)||0),0);
-        const {data,error}=await supabaseClient.from('skill_taxonomy').insert({
+        const {error}=await supabaseClient.from('skill_taxonomy').insert({
             family_id:parentFamilyId,
             subject_id:subjectId,
             parent_id:parentId,
@@ -1324,12 +1324,14 @@ button:hover{opacity:.92;transform:translateY(-1px)}
             item_type:type==='category'?'CATEGORY':'SUBCATEGORY',
             color,
             sort_order:maxOrder+10
-        }).select('id,family_id,subject_id,parent_id,name,item_type,color,sort_order').single();
+        });
         if(error){afficherQcmMessage('Création impossible : '+error.message);return;}
 
         await chargerTaxonomie();
         fermerTousLesFormulairesTaxonomieInline();
         if(type==='category'){
+            const data=skillTaxonomy.find(x=>String(x.subject_id)===String(subjectId)&&x.item_type==='CATEGORY'&&x.name===name);
+            if(!data){afficherQcmMessage('Élément enregistré, mais impossible de le retrouver immédiatement. Recharge la page.');return;}
             categorySelect.dataset.selected=data.id;
             categorySelect.value=data.id;
             const sub=document.getElementById('qcm-skill');
