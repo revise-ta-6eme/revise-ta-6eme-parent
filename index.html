@@ -1097,7 +1097,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
 
     async function chargerTaxonomie() {
         if (!parentFamilyId) return;
-        const { data, error } = await supabaseClient.from('skill_taxonomy').select('id,family_id,subject_id,parent_id,name,item_type,color,sort_order').eq('family_id', parentFamilyId).order('sort_order',{ascending:true}).order('name',{ascending:true});
+        const { data, error } = await supabaseClient.from('skill_taxonomy').select('id,family_id,subject_id,parent_id,name,item_type,color,sort_order').or(`family_id.eq.${parentFamilyId},family_id.is.null`).order('sort_order',{ascending:true}).order('name',{ascending:true});
         if (error) { console.error('Impossible de charger les savoir-faire', error); skillTaxonomy=[]; return; }
         skillTaxonomy = data || [];
     }
