@@ -860,6 +860,8 @@ button:hover{opacity:.92;transform:translateY(-1px)}
     let qcmEditingId = null;
     let qcmParsedQuestions = [];
     let qcmCreationMode = null;
+    let qcmEditingContext = null;
+    let qcmExistingQuestions = [];
     let childProfiles = [];
 
     function afficherQcmMessage(texte, succes=false) {
@@ -1368,6 +1370,8 @@ button:hover{opacity:.92;transform:translateY(-1px)}
 
     async function ouvrirCreationQcm() {
         qcmEditingId = null;
+        qcmEditingContext = null;
+        qcmExistingQuestions = [];
         qcmParsedQuestions = [];
         qcmCreationMode = null;
         document.getElementById("qcm-modal-title").textContent = "➕ Créer un QCM";
@@ -1395,14 +1399,44 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         document.getElementById("qcm-modal").style.display = "flex";
     }
 
-    function ouvrirAjoutQuestions(id, title) {
+    async function ouvrirAjoutQuestions(id, title) {
+        const asked = prompt("Combien de questions veux-tu ajouter ?", "5");
+        if (asked === null) return;
+        let wanted = parseInt(asked, 10);
+        if (!Number.isFinite(wanted) || wanted < 1) {
+            afficherQcmMessage("Indique un nombre de questions supérieur à 0.");
+            return;
+        }
+        wanted = Math.min(50, wanted);
+
         qcmEditingId = id;
         qcmParsedQuestions = [];
-        qcmCreationMode = "manuel";
-        document.getElementById("qcm-modal-title").textContent = "➕ Ajouter des questions à « " + title + " »";
+        qcmExistingQuestions = [];
+        qcmCreationMode = "chatgpt";
+
+        const { data:qcm, error:qcmError } = await supabaseClient.from("qcms")
+            .select("id,title,subject_id,chapter,qcm_type,skill_name")
+            .eq("id", id).single();
+        if (qcmError || !qcm) {
+            afficherQcmMessage("Impossible de charger le QCM : " + (qcmError?.message || "QCM introuvable"));
+            return;
+        }
+        qcmEditingContext = qcm;
+
+        const { data:existing, error:existingError } = await supabaseClient.from("questions")
+            .select("question_text").eq("qcm_id", id).order("question_number", {ascending:true});
+        if (!existingError) qcmExistingQuestions = (existing || []).map(x => x.question_text).filter(Boolean);
+
+        document.getElementById("qcm-modal-title").textContent = "➕ Ajouter " + wanted + " question(s) à « " + title + " »";
+        document.getElementById("qcm-question-count").value = wanted;
+        document.getElementById("qcm-type").value = qcm.qcm_type || "SAVOIR";
+        document.getElementById("qcm-subject").value = qcm.subject_id || "";
+        document.getElementById("qcm-chapter").value = qcm.chapter || "";
+        document.getElementById("qcm-title").value = qcm.title || title;
         document.getElementById("qcm-paste").value = "";
         document.getElementById("qcm-paste-generated").value = "";
         document.getElementById("qcm-preview").style.display = "none";
+
         document.getElementById("qcm-type").disabled = true;
         document.getElementById("qcm-subject").disabled = true;
         document.getElementById("qcm-chapter").disabled = true;
@@ -1410,19 +1444,16 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         document.getElementById("qcm-skill-category").disabled = true;
         document.getElementById("qcm-title").disabled = true;
         document.querySelectorAll(".qcm-child").forEach(c => c.disabled = true);
-        document.getElementById("mode-chatgpt-btn").style.display = "none";
+        document.getElementById("mode-chatgpt-btn").style.display = "inline-block";
         document.getElementById("mode-manuel-btn").style.display = "inline-block";
-        document.getElementById("chatgpt-mode-field").style.display = "none";
-        document.getElementById("manual-mode-field").style.display = "block";
-        document.getElementById("ai-prompt-field").style.display = "none";
-        document.getElementById("generated-questions-field").style.display = "none";
-        document.getElementById("analyze-field").style.display = "block";
-        document.getElementById("mode-manuel-btn").className = "primary";
         document.getElementById("qcm-modal").style.display = "flex";
+        choisirModeCreation("chatgpt");
     }
 
     function fermerQcmModal() {
         document.getElementById("qcm-modal").style.display = "none";
+        qcmEditingContext = null;
+        qcmExistingQuestions = [];
         ["qcm-type","qcm-subject","qcm-chapter","qcm-skill-category","qcm-skill","qcm-title"].forEach(id => document.getElementById(id).disabled = false);
         document.querySelectorAll(".qcm-child").forEach(c => c.disabled = false);
         document.getElementById("mode-chatgpt-btn").style.display = "inline-block";
@@ -1451,11 +1482,12 @@ button:hover{opacity:.92;transform:translateY(-1px)}
     }
 
     function construireConsigneChatGPT() {
-        const type = document.getElementById("qcm-type").value === "SAVOIR_FAIRE" ? "SAVOIR-FAIRE" : "SAVOIR";
+        const typeValue = qcmEditingContext?.qcm_type || document.getElementById("qcm-type").value;
+        const type = typeValue === "SAVOIR_FAIRE" ? "SAVOIR-FAIRE" : "SAVOIR";
         const subjectSelect = document.getElementById("qcm-subject");
         const mat = subjectSelect.selectedOptions[0]?.text?.trim() || "";
-        const ch = document.getElementById("qcm-chapter").value.trim();
-        const skill = document.getElementById("qcm-skill").value.trim();
+        const ch = qcmEditingContext?.chapter || document.getElementById("qcm-chapter").value.trim();
+        const skill = qcmEditingContext?.skill_name || document.getElementById("qcm-skill").value.trim();
         const courseRule = `IMPORTANT — UTILISATION DU COURS FOURNI
 
 Si je te fournis une ou plusieurs photos du cours, un document, un texte de cours ou des éléments de cours, tu dois impérativement t'appuyer sur ce contenu comme source principale et de référence.
@@ -1500,8 +1532,15 @@ Les explications sont facultatives : si une explication n'apporte rien ou ne peu
 
 Le QCM doit comporter à la fois des questions de cours permettant de vérifier les connaissances et la compréhension des notions, et des exercices d'application simples permettant de vérifier que l'élève sait utiliser les règles ou notions apprises.
 Les exercices d'application doivent rester adaptés à un élève de 6e et directement liés au contenu enseigné.`;
-        return `Crée un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.
+        const addRule = qcmEditingId ? `IMPORTANT — AJOUT À UN QCM EXISTANT
 
+Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions.
+Ne reprends pas et ne reformule pas les questions déjà présentes dans le QCM.
+${qcmExistingQuestions.length ? `Questions déjà présentes à ne pas dupliquer :\n- ${qcmExistingQuestions.join("\n- ")}` : ""}
+` : "";
+        return `${qcmEditingId ? `Ajoute des questions à` : `Crée`} un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.
+
+${addRule}
 Génère ${questionCount} questions à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question.
 
 Le QCM doit être adapté à un élève de 6e et rester strictement dans les notions attendues à ce niveau.
