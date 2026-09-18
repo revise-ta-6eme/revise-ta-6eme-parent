@@ -1528,6 +1528,24 @@ Il doit y avoir exactement ${questionCount} questions, exactement quatre choix A
 Vérifie attentivement que la lettre indiquée après « Corrigé : » correspond bien à la bonne réponse.
 
 Les explications sont facultatives : si une explication n'apporte rien ou ne peut pas être justifiée par le cours, indique simplement « Corrigé : X » sans inventer d'explication.`;
+        const distractorRule = `QUALITÉ DES MAUVAISES RÉPONSES
+
+Les mauvaises réponses doivent être plausibles et proches de la bonne réponse, sans être absurdes ni manifestement fausses.
+- Construis des distracteurs qui pourraient réellement piéger un élève de 6e ayant une confusion ou une erreur classique.
+- Lorsque c'est pertinent, utilise des erreurs fréquentes, des notions voisines, des valeurs proches ou des formulations qui ressemblent à la bonne réponse.
+- Évite les réponses trop faciles à éliminer simplement parce qu'elles sont hors sujet, beaucoup trop longues ou manifestement incohérentes.
+- Une seule réponse doit être réellement correcte : les distracteurs doivent rester faux au regard du cours fourni.
+
+HUMOUR ET RÉFÉRENCES DE LA GÉNÉRATION DES ÉLÈVES
+Dans environ 15 % des questions, tu peux remplacer une des mauvaises réponses par une réponse fausse humoristique, pensée pour des élèves français de 6e.
+- Utilise ponctuellement des références réellement connues de leur génération : memes, trends TikTok/YouTube, expressions de collégiens, situations du quotidien et références virales actuelles comme « six seven », si elles sont pertinentes.
+- Le ton peut être légèrement familier et complice, mais reste adapté à l'école.
+- Les références doivent être compréhensibles par des préadolescents français aujourd'hui.
+- Pas de vulgarité, d'insultes, de contenu adulte ou de référence politique.
+- Ne mets pas une référence humoristique dans toutes les questions et ne répète pas systématiquement la même référence.
+- L'humour doit rester une petite surprise et ne doit jamais créer d'ambiguïté sur la bonne réponse.
+- Les autres mauvaises réponses restent sérieuses, plausibles et pédagogiquement utiles.
+- N'invente pas de fausses tendances présentées comme populaires.`;
         const mixRule = `CONTENU DU QCM
 
 Le QCM doit comporter à la fois des questions de cours permettant de vérifier les connaissances et la compréhension des notions, et des exercices d'application simples permettant de vérifier que l'élève sait utiliser les règles ou notions apprises.
@@ -1546,6 +1564,8 @@ Génère ${questionCount} questions à 4 réponses possibles (A, B, C, D), avec 
 Le QCM doit être adapté à un élève de 6e et rester strictement dans les notions attendues à ce niveau.
 
 ${courseRule}
+
+${distractorRule}
 
 ${mixRule}
 
