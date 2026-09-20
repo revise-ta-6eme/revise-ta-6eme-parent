@@ -407,8 +407,8 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         <h2 id="qcm-modal-title">➕ Créer un QCM</h2>
         <div class="form-grid">
           <div class="field"><label for="qcm-type">Type</label><select id="qcm-type" onchange="adapterFormulaireQcm(); actualiserConsigneSiNecessaire()"><option value="SAVOIR">📘 Savoir</option><option value="SAVOIR_FAIRE">🛠️ Savoir-faire</option></select></div>
-          <div class="field"><label for="qcm-question-model">Format des questions</label><select id="qcm-question-model" onchange="actualiserConsigneSiNecessaire()"><option value="qcm">🔵 QCM — 4 choix</option><option value="vf">🟢 Vrai / Faux</option><option value="libre">🟠 Réponse libre</option><option value="traduction">🔷 Traduction FR ↔ EN</option><option value="mixte">🟣 Mixte — QCM + Vrai/Faux + Réponse libre + Traduction</option></select></div>
-          <div class="field"><label for="qcm-subject">Matière</label><select id="qcm-subject" onchange="annulerAjoutTaxonomieInline('category'); annulerAjoutTaxonomieInline('skill'); actualiserMenusSavoirFaire(); actualiserConsigneSiNecessaire()"></select></div>
+          <div class="field"><label for="qcm-question-model">Format des questions</label><select id="qcm-question-model" onchange="actualiserConsigneSiNecessaire()"><option value="qcm">🔵 QCM — 4 choix</option><option value="vf">🟢 Vrai / Faux</option><option value="libre">🟠 Réponse libre</option><option value="traduction" id="qcm-model-traduction-option">🔷 Traduction FR ↔ EN</option><option value="mixte" id="qcm-model-mixte-option">🟣 Mixte — QCM + Vrai/Faux + Réponse libre</option></select></div>
+          <div class="field"><label for="qcm-subject">Matière</label><select id="qcm-subject" onchange="annulerAjoutTaxonomieInline('category'); annulerAjoutTaxonomieInline('skill'); actualiserMenusSavoirFaire(); actualiserFormatsSelonMatiere()"></select></div>
           <div class="field"><label for="qcm-chapter">Chapitre</label><input id="qcm-chapter" oninput="actualiserConsigneSiNecessaire()" placeholder="Ex. Les accords dans le groupe nominal"></div>
           <div class="field" id="skill-category-field" style="display:none;"><label for="qcm-skill-category">Catégorie de savoir-faire</label><select id="qcm-skill-category" onchange="changementCategorieSavoirFaire()"><option value="">Choisir une catégorie…</option></select><button class="secondary taxonomy-inline-trigger" type="button" onclick="ouvrirAjoutTaxonomieInline('category')">➕ Ajouter une catégorie</button><div id="taxonomy-inline-category" class="taxonomy-inline-form" style="display:none;"><div class="taxonomy-inline-title">Nouvelle catégorie</div><div class="taxonomy-inline-grid"><div class="field"><label for="taxonomy-inline-category-name">Nom de la catégorie</label><input id="taxonomy-inline-category-name" placeholder="Ex. Lecture / compréhension"></div><div class="field"><label for="taxonomy-inline-category-color">Couleur</label><input id="taxonomy-inline-category-color" type="color" value="#2AA7D6"></div></div><div class="taxonomy-inline-actions"><button class="secondary" type="button" onclick="annulerAjoutTaxonomieInline('category')">Annuler</button><button class="primary" type="button" onclick="enregistrerTaxonomieInline('category')">💾 Enregistrer</button></div></div></div>
           <div class="field" id="skill-field" style="display:none;"><label for="qcm-skill">Compétence / savoir-faire</label><select id="qcm-skill" onchange="changementCompetenceSavoirFaire()"><option value="">Choisir une compétence…</option></select><button class="secondary taxonomy-inline-trigger" type="button" onclick="ouvrirAjoutTaxonomieInline('skill')">➕ Ajouter une compétence</button><div id="taxonomy-inline-skill" class="taxonomy-inline-form" style="display:none;"><div class="taxonomy-inline-title">Nouvelle compétence</div><div class="taxonomy-inline-grid"><div class="field"><label for="taxonomy-inline-skill-name">Nom de la compétence</label><input id="taxonomy-inline-skill-name" placeholder="Ex. Prélever une information"></div><div class="field"><label for="taxonomy-inline-skill-color">Couleur</label><input id="taxonomy-inline-skill-color" type="color" value="#8B5CF6"></div></div><p id="taxonomy-inline-skill-hint" class="hint"></p><div class="taxonomy-inline-actions"><button class="secondary" type="button" onclick="annulerAjoutTaxonomieInline('skill')">Annuler</button><button class="primary" type="button" onclick="enregistrerTaxonomieInline('skill')">💾 Enregistrer</button></div></div></div>
@@ -1258,6 +1258,26 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         renderLibrarySubjects();
     }
 
+    function estMatiereLangue(nom){
+        const n=(nom||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+        const langues=["anglais","espagnol","italien","allemand","portugais","arabe","chinois","japonais","russe","latin","grec","grec ancien","neerlandais","hollandais"];
+        return langues.includes(n);
+    }
+
+    function actualiserFormatsSelonMatiere(){
+        const select=document.getElementById("qcm-question-model");
+        const subject=document.getElementById("qcm-subject");
+        if(!select||!subject)return;
+        const mat=subject.selectedOptions[0]?.text?.trim()||"";
+        const langue=estMatiereLangue(mat);
+        const traduction=document.getElementById("qcm-model-traduction-option");
+        const mixte=document.getElementById("qcm-model-mixte-option");
+        if(traduction)traduction.hidden=!langue;
+        if(mixte)mixte.textContent=langue?"🟣 Mixte — QCM + Vrai/Faux + Réponse libre + Traduction":"🟣 Mixte — QCM + Vrai/Faux + Réponse libre";
+        if(!langue && select.value==="traduction")select.value="qcm";
+        actualiserConsigneSiNecessaire();
+    }
+
     function actualiserConsigneSiNecessaire() {
         if (qcmCreationMode !== "chatgpt") return;
         const consigne = construireConsigneChatGPT();
@@ -1459,6 +1479,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         if(parentFamilyId) await chargerTaxonomie();
         adapterFormulaireQcm();
         await actualiserMenusSavoirFaire();
+        actualiserFormatsSelonMatiere();
         document.getElementById("qcm-modal").style.display = "flex";
     }
 
@@ -1518,6 +1539,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         document.getElementById("qcm-type").value = qcm.qcm_type || "SAVOIR";
         document.getElementById("qcm-question-model").value = "mixte";
         document.getElementById("qcm-subject").value = qcm.subject_id || "";
+        actualiserFormatsSelonMatiere();
         document.getElementById("qcm-chapter").value = qcm.chapter || "";
         document.getElementById("qcm-skill").value = qcm.skill_name || "";
         document.getElementById("qcm-title").value = qcm.title || title || "";
@@ -1609,11 +1631,15 @@ Si le cours fourni ne permet pas de justifier une explication, n'invente rien.`;
         if (questionCount > 50) questionCount = 50;
         if (questionCountEl) questionCountEl.value = questionCount;
         const model = getQuestionModel();
+        const matEstLangue = estMatiereLangue(mat);
         let formatRule;
         if (model === "mixte") {
+            const formatsMixtes = matEstLangue ? "QCM à 4 choix, Vrai / Faux, Réponse libre et Traduction FR ↔ EN" : "QCM à 4 choix, Vrai / Faux et Réponse libre";
+            const typesMixtes = matEstLangue ? `[Type: QCM], [Type: Vrai/Faux], [Type: Réponse libre] ou [Type: Traduction]` : `[Type: QCM], [Type: Vrai/Faux] ou [Type: Réponse libre]`;
+            const exempleTraduction = matEstLangue ? `[Type: Traduction]\n4. Traduis en anglais : « bonjour »\nRéponse attendue : hello\nCorrigé : T — Explication : courte explication.` : "";
             formatRule = `IMPORTANT — FORMAT DE RÉPONSE : QCM MIXTE
 
-Tu dois mélanger librement les quatre modèles suivants dans le même QCM : QCM à 4 choix, Vrai / Faux, Réponse libre et Traduction FR ↔ EN. Varie réellement les modèles ; ne produis pas toutes les questions du même type.
+Tu dois mélanger librement les modèles suivants dans le même QCM : ${formatsMixtes}. Varie réellement les modèles ; ne produis pas toutes les questions du même type.
 
 Pour permettre un copié-collé direct dans mon application, place l'intégralité du QCM dans UN SEUL bloc de code Markdown, sans texte avant ou après.
 
@@ -1642,12 +1668,9 @@ Corrigé : A — Explication : courte explication.
 Réponse attendue : un seul mot
 Corrigé : A — Explication : courte explication.
 
-[Type: Traduction]
-4. Traduis en anglais : « bonjour »
-Réponse attendue : hello
-Corrigé : T — Explication : courte explication.
+${exempleTraduction}
 
-Il doit y avoir exactement ${questionCount} questions. Pour toute question [Type: Réponse libre], la « Réponse attendue » doit OBLIGATOIREMENT être constituée d’un seul mot, jamais d’une phrase ni de plusieurs mots. Pour toute question [Type: Traduction], la « Réponse attendue » doit être la traduction exacte attendue, sous forme d’un mot ou d’une courte expression nécessaire à la traduction, jamais une phrase explicative. Chaque question doit appartenir à un seul des quatre modèles et respecter strictement son format.`;
+Il doit y avoir exactement ${questionCount} questions. Pour toute question [Type: Réponse libre], la « Réponse attendue » doit OBLIGATOIREMENT être constituée d’un seul mot, jamais d’une phrase ni de plusieurs mots.${matEstLangue ? " Pour toute question [Type: Traduction], la « Réponse attendue » doit être la traduction exacte attendue, sous forme d’un mot ou d’une courte expression nécessaire à la traduction, jamais une phrase explicative." : ""} Chaque question doit appartenir à un seul des modèles autorisés pour cette matière et respecter strictement son format.`;
         } else if (model === "vf") {
             formatRule = `IMPORTANT — FORMAT DE RÉPONSE : VRAI / FAUX
 
@@ -1736,7 +1759,7 @@ Les réponses incorrectes doivent être PLAUSIBLES et proches de la bonne répon
 Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions. Elles doivent rester dans la même matière, le même chapitre et le même savoir-faire éventuel. Évite les doublons et les reformulations trop proches des questions déjà présentes dans le QCM.` : "";
         return `${qcmEditingId ? `Ajoute des questions à un QCM existant de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.` : `Crée un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.`}
 
-${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : model === "traduction" ? "de traduction français ↔ anglais" : model === "mixte" ? "en mélangeant les quatre formats : QCM, Vrai/Faux, réponse libre et traduction français ↔ anglais" : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
+${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : model === "traduction" ? "de traduction français ↔ anglais" : model === "mixte" ? (matEstLangue ? "en mélangeant les quatre formats : QCM, Vrai/Faux, réponse libre et traduction français ↔ anglais" : "en mélangeant les trois formats : QCM, Vrai/Faux et réponse libre") : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
 
 Le format choisi est : ${questionModelLabel()}. Respecte strictement ce format pour toutes les questions.
 
