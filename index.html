@@ -347,6 +347,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
       </div>
       <div class="qcm-toolbar">
         <button class="primary" type="button" onclick="ouvrirCreationQcm()">➕ Créer un QCM</button>
+        <button class="secondary" type="button" onclick="ouvrirCreationMatiere()">📚 Ajouter une matière</button>
         <button class="secondary" type="button" onclick="chargerQcms()">🔄 Actualiser</button>
       </div>
       <div class="library-tabs">
@@ -389,12 +390,24 @@ button:hover{opacity:.92;transform:translateY(-1px)}
       </div>
     </div>
 
+    <div id="matiere-modal" class="modal-backdrop" style="display:none;">
+      <div class="modal" style="max-width:520px;">
+        <h2>📚 Ajouter une matière</h2>
+        <div class="form-grid">
+          <div class="field full"><label for="new-subject-name">Nom de la matière</label><input id="new-subject-name" placeholder="Ex. Espagnol" maxlength="80" onkeydown="if(event.key==='Enter'){event.preventDefault();enregistrerNouvelleMatiere();}"></div>
+          <p class="hint full">La nouvelle matière sera disponible dans la création des QCM et dans l'ajout de questions. Elle sera également enregistrée dans la banque de matières de l'application.</p>
+          <div id="new-subject-message" class="hint full" style="display:none;"></div>
+        </div>
+        <div class="modal-footer"><button class="secondary" type="button" onclick="fermerCreationMatiere()">Annuler</button><button class="primary" type="button" onclick="enregistrerNouvelleMatiere()">💾 Créer la matière</button></div>
+      </div>
+    </div>
+
     <div id="qcm-modal" class="modal-backdrop">
       <div class="modal">
         <h2 id="qcm-modal-title">➕ Créer un QCM</h2>
         <div class="form-grid">
           <div class="field"><label for="qcm-type">Type</label><select id="qcm-type" onchange="adapterFormulaireQcm(); actualiserConsigneSiNecessaire()"><option value="SAVOIR">📘 Savoir</option><option value="SAVOIR_FAIRE">🛠️ Savoir-faire</option></select></div>
-          <div class="field"><label for="qcm-question-model">Format des questions</label><select id="qcm-question-model" onchange="actualiserConsigneSiNecessaire()"><option value="qcm">🔵 QCM — 4 choix</option><option value="vf">🟢 Vrai / Faux</option><option value="libre">🟠 Réponse libre</option><option value="traduction">🔷 Traduction FR ↔ EN</option><option value="mixte">🟣 Mixte — QCM + Vrai/Faux + Réponse libre</option></select></div>
+          <div class="field"><label for="qcm-question-model">Format des questions</label><select id="qcm-question-model" onchange="actualiserConsigneSiNecessaire()"><option value="qcm">🔵 QCM — 4 choix</option><option value="vf">🟢 Vrai / Faux</option><option value="libre">🟠 Réponse libre</option><option value="traduction">🔷 Traduction FR ↔ EN</option><option value="mixte">🟣 Mixte — QCM + Vrai/Faux + Réponse libre + Traduction</option></select></div>
           <div class="field"><label for="qcm-subject">Matière</label><select id="qcm-subject" onchange="annulerAjoutTaxonomieInline('category'); annulerAjoutTaxonomieInline('skill'); actualiserMenusSavoirFaire(); actualiserConsigneSiNecessaire()"></select></div>
           <div class="field"><label for="qcm-chapter">Chapitre</label><input id="qcm-chapter" oninput="actualiserConsigneSiNecessaire()" placeholder="Ex. Les accords dans le groupe nominal"></div>
           <div class="field" id="skill-category-field" style="display:none;"><label for="qcm-skill-category">Catégorie de savoir-faire</label><select id="qcm-skill-category" onchange="changementCategorieSavoirFaire()"><option value="">Choisir une catégorie…</option></select><button class="secondary taxonomy-inline-trigger" type="button" onclick="ouvrirAjoutTaxonomieInline('category')">➕ Ajouter une catégorie</button><div id="taxonomy-inline-category" class="taxonomy-inline-form" style="display:none;"><div class="taxonomy-inline-title">Nouvelle catégorie</div><div class="taxonomy-inline-grid"><div class="field"><label for="taxonomy-inline-category-name">Nom de la catégorie</label><input id="taxonomy-inline-category-name" placeholder="Ex. Lecture / compréhension"></div><div class="field"><label for="taxonomy-inline-category-color">Couleur</label><input id="taxonomy-inline-category-color" type="color" value="#2AA7D6"></div></div><div class="taxonomy-inline-actions"><button class="secondary" type="button" onclick="annulerAjoutTaxonomieInline('category')">Annuler</button><button class="primary" type="button" onclick="enregistrerTaxonomieInline('category')">💾 Enregistrer</button></div></div></div>
@@ -404,7 +417,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
           <div class="field full"><label>1️⃣ Comment veux-tu créer les questions ?</label><div class="qcm-toolbar"><button id="mode-chatgpt-btn" class="secondary" type="button" onclick="genererAvecChatGPT()">🤖 Générer avec ChatGPT</button><button id="mode-manuel-btn" class="secondary" type="button" onclick="choisirModeCreation('manuel')">✍️ Créer les questions manuellement</button></div></div>
           <div class="field full" id="chatgpt-mode-field" style="display:none;"><label>2️⃣ Générer les questions avec ChatGPT</label><div class="field" style="max-width:220px;"><label for="qcm-question-count">Nombre de questions</label><input id="qcm-question-count" type="number" min="1" max="50" value="15" inputmode="numeric" oninput="actualiserConsigneSiNecessaire()"></div><div class="qcm-toolbar"><button class="secondary" type="button" onclick="document.getElementById('qcm-photo-input').click()">📸 Ajouter des photos du cours</button><input id="qcm-photo-input" type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="photoCoursSelectionnee(this)"></div></div>
           <div class="field full" id="ai-prompt-field" style="display:none;"><label>2️⃣ Préparer la génération avec ChatGPT</label><div class="qcm-toolbar"><button class="primary" type="button" onclick="lancerGenerationChatGPT()">📋 Copier la consigne et ouvrir ChatGPT</button><button class="secondary" type="button" onclick="togglePromptDetails()">👁️ Voir la consigne</button></div><div id="ai-prompt-details" style="display:none;margin-top:10px;"><div id="ai-prompt-display" class="hint" style="max-height:150px;overflow:auto;white-space:pre-wrap;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafafa;"></div><textarea id="ai-prompt" style="display:none"></textarea></div><p id="ai-help" class="hint">La consigne est préparée automatiquement à partir de tes choix. Elle sera copiée puis ouverte dans ChatGPT.</p></div>
-          <div class="field full" id="manual-mode-field" style="display:none;"><label for="qcm-paste">2️⃣ Écrire ou coller les questions</label><textarea id="qcm-paste" placeholder="Écris ou colle ici tes questions, leurs corrigés et, si tu le souhaites, une explication."></textarea><p class="hint">La détection reconnaît les formats QCM, Vrai/Faux, Réponse libre et Traduction. En mode mixte, tu peux indiquer le type avec « [Type: QCM] », « [Type: Vrai/Faux] » ou « [Type: Réponse libre] ».</p></div>
+          <div class="field full" id="manual-mode-field" style="display:none;"><label for="qcm-paste">2️⃣ Écrire ou coller les questions</label><textarea id="qcm-paste" placeholder="Écris ou colle ici tes questions, leurs corrigés et, si tu le souhaites, une explication."></textarea><p class="hint">La détection reconnaît les formats QCM, Vrai/Faux, Réponse libre et Traduction. En mode mixte, tu peux indiquer le type avec « [Type: QCM] », « [Type: Vrai/Faux] », « [Type: Réponse libre] » ou « [Type: Traduction] ».</p></div>
           <div class="field full" id="generated-questions-field" style="display:none;"><label for="qcm-paste-generated">3️⃣ Questions + corrigés</label><textarea id="qcm-paste-generated" placeholder="Après avoir obtenu le QCM dans ChatGPT, reviens ici et colle uniquement le bloc du QCM."></textarea><p class="hint">Colle ici la réponse de ChatGPT. Les questions peuvent être ajoutées sans limite au QCM.</p></div>
           <div class="field full" id="analyze-field" style="display:none;"><button class="secondary" type="button" onclick="previsualiserQuestions()">🔎 Analyser les questions</button><div id="qcm-preview" class="preview" style="display:none;"></div></div>
         </div>
@@ -908,6 +921,55 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         const select = document.getElementById("qcm-subject");
         if (error) { console.error(error); select.innerHTML = "<option value=''>Erreur de chargement</option>"; return; }
         select.innerHTML = (data || []).map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+    }
+
+    function ouvrirCreationMatiere() {
+        const modal=document.getElementById("matiere-modal");
+        const input=document.getElementById("new-subject-name");
+        const msg=document.getElementById("new-subject-message");
+        if(msg){msg.style.display="none";msg.textContent="";}
+        if(input) input.value="";
+        if(modal) modal.style.display="flex";
+        setTimeout(()=>input?.focus(),50);
+    }
+
+    function fermerCreationMatiere() {
+        const modal=document.getElementById("matiere-modal");
+        if(modal) modal.style.display="none";
+    }
+
+    async function enregistrerNouvelleMatiere() {
+        const input=document.getElementById("new-subject-name");
+        const msg=document.getElementById("new-subject-message");
+        const name=(input?.value||"").trim().replace(/\s+/g," ");
+        if(!name){
+            if(msg){msg.style.display="block";msg.textContent="Indique le nom de la matière.";}
+            return;
+        }
+        const { data: existing, error: existingError } = await supabaseClient.from("subjects").select("id,name").ilike("name",name).limit(1);
+        if(existingError){
+            console.error(existingError);
+            if(msg){msg.style.display="block";msg.textContent="Impossible de vérifier les matières existantes : "+existingError.message;}
+            return;
+        }
+        if(existing?.length){
+            if(msg){msg.style.display="block";msg.textContent="Cette matière existe déjà.";}
+            const select=document.getElementById("qcm-subject");
+            if(select){select.value=existing[0].id;}
+            return;
+        }
+        const { data, error } = await supabaseClient.from("subjects").insert({name}).select("id,name").single();
+        if(error){
+            console.error(error);
+            if(msg){msg.style.display="block";msg.textContent="Création impossible : "+error.message;}
+            return;
+        }
+        await chargerMatieresQcm();
+        const select=document.getElementById("qcm-subject");
+        if(select && data?.id) select.value=data.id;
+        fermerCreationMatiere();
+        await chargerQcms();
+        afficherQcmMessage(`Matière « ${escapeHtml(data?.name || name)} » créée.`,true);
     }
 
     function escapeHtml(value) {
@@ -1551,7 +1613,7 @@ Si le cours fourni ne permet pas de justifier une explication, n'invente rien.`;
         if (model === "mixte") {
             formatRule = `IMPORTANT — FORMAT DE RÉPONSE : QCM MIXTE
 
-Tu dois mélanger librement les trois modèles suivants dans le même QCM : QCM à 4 choix, Vrai / Faux et Réponse libre. Varie réellement les modèles ; ne produis pas toutes les questions du même type.
+Tu dois mélanger librement les quatre modèles suivants dans le même QCM : QCM à 4 choix, Vrai / Faux, Réponse libre et Traduction FR ↔ EN. Varie réellement les modèles ; ne produis pas toutes les questions du même type.
 
 Pour permettre un copié-collé direct dans mon application, place l'intégralité du QCM dans UN SEUL bloc de code Markdown, sans texte avant ou après.
 
@@ -1580,7 +1642,12 @@ Corrigé : A — Explication : courte explication.
 Réponse attendue : un seul mot
 Corrigé : A — Explication : courte explication.
 
-Il doit y avoir exactement ${questionCount} questions. Pour toute question [Type: Réponse libre], la « Réponse attendue » doit OBLIGATOIREMENT être constituée d’un seul mot, jamais d’une phrase ni de plusieurs mots. Chaque question doit appartenir à un seul des trois modèles et respecter strictement son format.`;
+[Type: Traduction]
+4. Traduis en anglais : « bonjour »
+Réponse attendue : hello
+Corrigé : T — Explication : courte explication.
+
+Il doit y avoir exactement ${questionCount} questions. Pour toute question [Type: Réponse libre], la « Réponse attendue » doit OBLIGATOIREMENT être constituée d’un seul mot, jamais d’une phrase ni de plusieurs mots. Pour toute question [Type: Traduction], la « Réponse attendue » doit être la traduction exacte attendue, sous forme d’un mot ou d’une courte expression nécessaire à la traduction, jamais une phrase explicative. Chaque question doit appartenir à un seul des quatre modèles et respecter strictement son format.`;
         } else if (model === "vf") {
             formatRule = `IMPORTANT — FORMAT DE RÉPONSE : VRAI / FAUX
 
@@ -1669,7 +1736,7 @@ Les réponses incorrectes doivent être PLAUSIBLES et proches de la bonne répon
 Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions. Elles doivent rester dans la même matière, le même chapitre et le même savoir-faire éventuel. Évite les doublons et les reformulations trop proches des questions déjà présentes dans le QCM.` : "";
         return `${qcmEditingId ? `Ajoute des questions à un QCM existant de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.` : `Crée un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.`}
 
-${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : model === "traduction" ? "de traduction français ↔ anglais" : model === "mixte" ? "en mélangeant les trois formats : QCM, Vrai/Faux et réponse libre" : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
+${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : model === "traduction" ? "de traduction français ↔ anglais" : model === "mixte" ? "en mélangeant les quatre formats : QCM, Vrai/Faux, réponse libre et traduction français ↔ anglais" : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
 
 Le format choisi est : ${questionModelLabel()}. Respecte strictement ce format pour toutes les questions.
 
@@ -1790,15 +1857,15 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         const starts = [...normalized.matchAll(/(?:^|\n)\s*(?:Question\s*)?(\d+)[\.)]\s*/gi)];
         const blocks=[];
         if(starts.length) starts.forEach((m,i)=>blocks.push(normalized.slice(m.index+(m[0].startsWith("\n")?1:0),i+1<starts.length?starts[i+1].index:normalized.length)));
-        else blocks.push(...normalized.split(/\n\s*\n(?=\s*(?:\[Type\s*:\s*(?:QCM|Vrai\s*\/\s*Faux|Réponse\s*libre)\]|Question\s*)?\d+[\.)])/i));
+        else blocks.push(...normalized.split(/\n\s*\n(?=\s*(?:\[Type\s*:\s*(?:QCM|Vrai\s*\/\s*Faux|Réponse\s*libre|Traduction)\]|Question\s*)?\d+[\.)])/i));
         const out=[]; const defaultModel=getQuestionModel();
         for(const rawBlock of blocks){
             let clean=rawBlock.trim(); if(!clean) continue;
-            const typeTag=clean.match(/^\s*\[\s*Type\s*:\s*(QCM|Vrai\s*\/\s*Faux|Réponse\s*libre)\s*\]\s*/i);
+            const typeTag=clean.match(/^\s*\[\s*Type\s*:\s*(QCM|Vrai\s*\/\s*Faux|Réponse\s*libre|Traduction)\s*\]\s*/i);
             let model=defaultModel;
             if(typeTag){
                 const t=typeTag[1].toLowerCase().replace(/\s+/g,'');
-                model=t==='qcm'?'qcm':t.startsWith('vrai')?'vf':'libre';
+                model=t==='qcm'?'qcm':t.startsWith('vrai')?'vf':t.startsWith('réponse')?'libre':t.startsWith('traduction')?'traduction':'libre';
                 clean=clean.slice(typeTag[0].length).trim();
             }
             // En mode mixte (et par sécurité dans les autres modes), détecte aussi le format réel du bloc.
