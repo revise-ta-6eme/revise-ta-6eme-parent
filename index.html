@@ -1577,10 +1577,10 @@ Corrigé : A — Explication : courte explication.
 
 [Type: Réponse libre]
 3. Question
-Réponse attendue : réponse courte et précise
+Réponse attendue : un seul mot
 Corrigé : A — Explication : courte explication.
 
-Il doit y avoir exactement ${questionCount} questions. Chaque question doit appartenir à un seul des trois modèles et respecter strictement son format.`;
+Il doit y avoir exactement ${questionCount} questions. Pour toute question [Type: Réponse libre], la « Réponse attendue » doit OBLIGATOIREMENT être constituée d’un seul mot, jamais d’une phrase ni de plusieurs mots. Chaque question doit appartenir à un seul des trois modèles et respecter strictement son format.`;
         } else if (model === "vf") {
             formatRule = `IMPORTANT — FORMAT DE RÉPONSE : VRAI / FAUX
 
@@ -1607,7 +1607,7 @@ Pour permettre un copié-collé direct dans mon application, place l'intégralit
 Réponse attendue : réponse courte et précise
 Corrigé : A — Explication : courte explication pédagogique adaptée à un élève de 6e.
 
-Il doit y avoir exactement ${questionCount} questions. N'ajoute aucun choix A/B/C/D.`;
+Il doit y avoir exactement ${questionCount} questions. La « Réponse attendue » doit OBLIGATOIREMENT être constituée d’un seul mot, jamais d’une phrase ni de plusieurs mots. Choisis un mot précis et objectivement corrigeable. N’ajoute aucun choix A/B/C/D.`;
         } else {
             formatRule = `IMPORTANT — FORMAT DE RÉPONSE : QCM À 4 CHOIX
 
@@ -1727,6 +1727,10 @@ Contexte du QCM : type ${type}, matière ${mat}, chapitre ${ch}${skill ? `, savo
             : "✅ ChatGPT est ouvert. La consigne est affichée ici : copie-la dans ChatGPT puis clique sur Envoyer. Ensuite copie uniquement le QCM généré et reviens ici.");
     }
 
+    function isSingleWordAnswer(value) {
+        return /^\S+$/.test(String(value || "").trim());
+    }
+
     function formatGeneratedQuestions(list) {
         const m=getQuestionModel();
         return list.map((q,i)=> {
@@ -1796,7 +1800,7 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
                 const rm=clean.match(/(?:^|\n)\s*(?:r[ée]ponse\s+attendue|r[ée]ponse\s+correcte)\s*:\s*([^\n]+?)(?=\n\s*(?:corrig[ée]s?|explication)\s*:|$)/i);
                 let qtext=clean.split(/\n\s*(?:r[ée]ponse\s+attendue|r[ée]ponse\s+correcte)\s*:/i)[0].trim().replace(/^(?:Question\s*)?\d+[\.)]\s*/i,"").trim();
                 const corr=clean.match(/(?:^|\n)\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:\s*A\b/i);
-                if(qtext&&rm&&corr) out.push({model:'libre',question:qtext,a:rm[1].trim(),b:"",c:"",d:"",answer:"A",explanation}); continue;
+                if(qtext&&rm&&corr){ const attendu=rm[1].trim(); if(isSingleWordAnswer(attendu)) out.push({model:'libre',question:qtext,a:attendu,b:"",c:"",d:"",answer:"A",explanation}); continue; }
             }
             const am=clean.match(/(?:^|\n)\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:\s*([ABCD])(?:\s*[—–-]\s*explication\s*:\s*([^\n]*))?\s*(?=\n|$)/i); const answer=am?am[1].toUpperCase():"";
             if(am&&!explanation&&am[2]) explanation=am[2].trim();
@@ -1883,6 +1887,7 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
             const attendu = prompt("Réponse attendue :", a);
             if (attendu === null) return;
             if (!attendu.trim()) { afficherQcmMessage("La réponse attendue ne peut pas être vide."); return; }
+            if (!isSingleWordAnswer(attendu)) { afficherQcmMessage("La réponse attendue doit être un seul mot, jamais une phrase."); return; }
             const exp = prompt("Explication (facultative) :", explanation || ""); if (exp === null) return;
             enregistrerModificationQuestion(id, number, q.trim(), attendu.trim(), "", "", "", "A", exp.trim());
             return;
@@ -1902,7 +1907,7 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         const model = storedQuestionModel(a,b,c,d);
         if (!question || !a || (model === "qcm" && (!b || !c || !d))) { afficherQcmMessage(model === "qcm" ? "Tous les choix A, B, C et D doivent être remplis." : "La question et la réponse attendue doivent être remplies."); return; }
         if (model === "vf" && (!b || !["A","B"].includes(answer))) { afficherQcmMessage("Une question Vrai/Faux doit avoir les choix Vrai/Faux et un corrigé valide."); return; }
-        if (model === "libre") { a = a.trim(); b = ""; c = ""; d = ""; answer = "A"; }
+        if (model === "libre") { a = a.trim(); if (!isSingleWordAnswer(a)) { afficherQcmMessage("La réponse attendue doit être un seul mot, jamais une phrase."); return; } b = ""; c = ""; d = ""; answer = "A"; }
         const { error } = await supabaseClient.from("questions").update({
             question_text: question, choice_a: a, choice_b: b, choice_c: c, choice_d: d,
             correct_answer: answer, explanation: explanation || ""
