@@ -1264,7 +1264,17 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         return langues.includes(n);
     }
 
-    function actualiserFormatsSelonMatiere(){
+    function nomLanguePourTraduction(nom){
+    const n=(nom||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const correspondances={
+        anglais:"anglais", espagnol:"espagnol", italien:"italien", allemand:"allemand", portugais:"portugais",
+        arabe:"arabe", chinois:"chinois", japonais:"japonais", russe:"russe", latin:"latin", grec:"grec",
+        "grec ancien":"grec ancien", neerlandais:"néerlandais", hollandais:"néerlandais"
+    };
+    return correspondances[n] || nom.trim() || "la langue étudiée";
+}
+
+function actualiserFormatsSelonMatiere(){
         const select=document.getElementById("qcm-question-model");
         const subject=document.getElementById("qcm-subject");
         if(!select||!subject)return;
@@ -1272,8 +1282,11 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         const langue=estMatiereLangue(mat);
         const traduction=document.getElementById("qcm-model-traduction-option");
         const mixte=document.getElementById("qcm-model-mixte-option");
-        if(traduction)traduction.hidden=!langue;
-        if(mixte)mixte.textContent=langue?"🟣 Mixte — QCM + Vrai/Faux + Réponse libre + Traduction":"🟣 Mixte — QCM + Vrai/Faux + Réponse libre";
+        if(traduction){
+            traduction.hidden=!langue;
+            traduction.textContent=langue?`🔷 Traduction FR ↔ ${nomLanguePourTraduction(mat)}`:"🔷 Traduction FR ↔ langue";
+        }
+        if(mixte)mixte.textContent=langue?`🟣 Mixte — QCM + Vrai/Faux + Réponse libre + Traduction ${nomLanguePourTraduction(mat)}`:"🟣 Mixte — QCM + Vrai/Faux + Réponse libre";
         if(!langue && select.value==="traduction")select.value="qcm";
         actualiserConsigneSiNecessaire();
     }
@@ -1634,9 +1647,10 @@ Si le cours fourni ne permet pas de justifier une explication, n'invente rien.`;
         const matEstLangue = estMatiereLangue(mat);
         let formatRule;
         if (model === "mixte") {
-            const formatsMixtes = matEstLangue ? "QCM à 4 choix, Vrai / Faux, Réponse libre et Traduction FR ↔ EN" : "QCM à 4 choix, Vrai / Faux et Réponse libre";
+            const langueCible = nomLanguePourTraduction(mat);
+            const formatsMixtes = matEstLangue ? `QCM à 4 choix, Vrai / Faux, Réponse libre et Traduction français ↔ ${langueCible}` : "QCM à 4 choix, Vrai / Faux et Réponse libre";
             const typesMixtes = matEstLangue ? `[Type: QCM], [Type: Vrai/Faux], [Type: Réponse libre] ou [Type: Traduction]` : `[Type: QCM], [Type: Vrai/Faux] ou [Type: Réponse libre]`;
-            const exempleTraduction = matEstLangue ? `[Type: Traduction]\n4. Traduis en anglais : « bonjour »\nRéponse attendue : hello\nCorrigé : T — Explication : courte explication.` : "";
+            const exempleTraduction = matEstLangue ? `[Type: Traduction]\n4. Traduis en ${langueCible} : « bonjour »\nRéponse attendue : [traduction en ${langueCible}]\nCorrigé : T — Explication : courte explication.` : "";
             formatRule = `IMPORTANT — FORMAT DE RÉPONSE : QCM MIXTE
 
 Tu dois mélanger librement les modèles suivants dans le même QCM : ${formatsMixtes}. Varie réellement les modèles ; ne produis pas toutes les questions du même type.
@@ -1647,6 +1661,7 @@ Indique obligatoirement le modèle de chaque question avec l'une de ces lignes :
 [Type: QCM]
 [Type: Vrai/Faux]
 [Type: Réponse libre]
+[Type: Traduction]
 
 Utilise ensuite exactement le format correspondant :
 [Type: QCM]
@@ -1686,19 +1701,20 @@ Corrigé : A — Explication : courte explication pédagogique adaptée à un é
 
 Il doit y avoir exactement ${questionCount} questions et une seule réponse correcte : Vrai ou Faux. Ne crée jamais de choix C ou D.`;
         } else if (model === "traduction") {
-            formatRule = `IMPORTANT — FORMAT DE RÉPONSE : TRADUCTION FRANÇAIS ↔ ANGLAIS
+            const langueCible = nomLanguePourTraduction(mat);
+            formatRule = `IMPORTANT — FORMAT DE RÉPONSE : TRADUCTION FRANÇAIS ↔ ${langueCible.toUpperCase()}
 
-Tu dois créer des questions de traduction adaptées à un élève de 6e. Varie les deux sens : français → anglais et anglais → français.
+Tu dois créer des questions de traduction adaptées à un élève de 6e. Varie les deux sens : français → ${langueCible} et ${langueCible} → français.
 
 Pour permettre un copié-collé direct dans mon application, place l'intégralité du QCM dans UN SEUL bloc de code Markdown, sans texte avant ou après.
 
 À l'intérieur de ce bloc, utilise exactement ce format :
-1. Traduis en anglais : « bonjour »
-Réponse attendue : hello
+1. Traduis en ${langueCible} : « bonjour »
+Réponse attendue : [traduction en ${langueCible}]
 Corrigé : T — Explication : courte explication pédagogique adaptée à un élève de 6e.
 
-2. Traduis en français : « school »
-Réponse attendue : école
+2. Traduis en français : « [mot ou expression en ${langueCible}] »
+Réponse attendue : [traduction en français]
 Corrigé : T — Explication : courte explication pédagogique adaptée à un élève de 6e.
 
 Il doit y avoir exactement ${questionCount} questions. La réponse attendue peut être un mot ou une courte expression nécessaire à la traduction ; elle ne doit jamais être une phrase explicative. N'ajoute aucun choix A/B/C/D.`;
@@ -1759,7 +1775,7 @@ Les réponses incorrectes doivent être PLAUSIBLES et proches de la bonne répon
 Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions. Elles doivent rester dans la même matière, le même chapitre et le même savoir-faire éventuel. Évite les doublons et les reformulations trop proches des questions déjà présentes dans le QCM.` : "";
         return `${qcmEditingId ? `Ajoute des questions à un QCM existant de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.` : `Crée un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.`}
 
-${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : model === "traduction" ? "de traduction français ↔ anglais" : model === "mixte" ? (matEstLangue ? "en mélangeant les quatre formats : QCM, Vrai/Faux, réponse libre et traduction français ↔ anglais" : "en mélangeant les trois formats : QCM, Vrai/Faux et réponse libre") : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
+${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : model === "traduction" ? `de traduction français ↔ ${nomLanguePourTraduction(mat)}` : model === "mixte" ? (matEstLangue ? `en mélangeant les quatre formats : QCM, Vrai/Faux, réponse libre et traduction français ↔ ${nomLanguePourTraduction(mat)}` : "en mélangeant les trois formats : QCM, Vrai/Faux et réponse libre") : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
 
 Le format choisi est : ${questionModelLabel()}. Respecte strictement ce format pour toutes les questions.
 
@@ -1877,10 +1893,19 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
     function parserQuestions(text) {
         if (!text) return [];
         const normalized = text.replace(/```(?:markdown|text)?/gi, "").replace(/```/g, "").replace(/\r/g, "").replace(/[：]/g, ":");
-        const starts = [...normalized.matchAll(/(?:^|\n)\s*(?:Question\s*)?(\d+)[\.)]\s*/gi)];
+        const starts = [...normalized.matchAll(/(?:^|\n)\s*(\[\s*Type\s*:\s*(?:QCM|Vrai\s*\/\s*Faux|Réponse\s*libre|Traduction)\s*\]\s*)?(?:Question\s*)?(\d+)[\.)]\s*/gi)];
         const blocks=[];
-        if(starts.length) starts.forEach((m,i)=>blocks.push(normalized.slice(m.index+(m[0].startsWith("\n")?1:0),i+1<starts.length?starts[i+1].index:normalized.length)));
-        else blocks.push(...normalized.split(/\n\s*\n(?=\s*(?:\[Type\s*:\s*(?:QCM|Vrai\s*\/\s*Faux|Réponse\s*libre|Traduction)\]|Question\s*)?\d+[\.)])/i));
+        if(starts.length){
+            starts.forEach((m,i)=>{
+                const start=m.index+m[0].length;
+                const end=i+1<starts.length?starts[i+1].index:normalized.length;
+                const typePrefix=(m[1]||"").trim();
+                const body=normalized.slice(start,end).trim();
+                blocks.push((typePrefix?typePrefix+"\n":"")+body);
+            });
+        } else {
+            blocks.push(...normalized.split(/\n\s*\n(?=\s*(?:\[Type\s*:\s*(?:QCM|Vrai\s*\/\s*Faux|Réponse\s*libre|Traduction)\]|Question\s*)?\d+[\.)])/i));
+        }
         const out=[]; const defaultModel=getQuestionModel();
         for(const rawBlock of blocks){
             let clean=rawBlock.trim(); if(!clean) continue;
