@@ -1545,19 +1545,40 @@ Dans environ 15 % des questions, tu peux remplacer une des mauvaises réponses p
 - Ne mets pas une référence humoristique dans toutes les questions et ne répète pas systématiquement la même référence.
 - L'humour doit rester une petite surprise et ne doit jamais créer d'ambiguïté sur la bonne réponse.
 - Les autres mauvaises réponses restent sérieuses, plausibles et pédagogiquement utiles.
-- N'invente pas de fausses tendances présentées comme populaires.
-
-VARIATION DE LA DIFFICULTÉ
-Le QCM doit proposer une progression de difficulté variée, tout en restant adapté au niveau 6e.
-- La majorité des questions doivent être de difficulté standard 6e : connaissances, compréhension et applications directes du cours.
-- Environ 20 % des questions peuvent être de niveau « challenge » : elles demandent un peu plus de réflexion, de comparaison, de raisonnement, de mise en relation de plusieurs notions du cours ou d'application dans une situation légèrement moins directe.
-- Une question « challenge » doit rester strictement dans les notions réellement enseignées et ne doit pas demander une connaissance extérieure au cours fourni.
-- Les questions challenge ne doivent pas être des pièges artificiels : l'élève doit pouvoir trouver la réponse grâce à ce qu'il a appris.
-- Mélange les différents niveaux de difficulté dans tout le QCM : ne regroupe pas toutes les questions faciles puis toutes les questions difficiles.`;
+- N'invente pas de fausses tendances présentées comme populaires.`;
         const mixRule = `CONTENU DU QCM
 
 Le QCM doit comporter à la fois des questions de cours permettant de vérifier les connaissances et la compréhension des notions, et des exercices d'application simples permettant de vérifier que l'élève sait utiliser les règles ou notions apprises.
-Les exercices d'application doivent rester adaptés à un élève de 6e et directement liés au contenu enseigné.`;
+Les exercices d'application doivent rester adaptés à un élève de 6e et directement liés au contenu enseigné.
+
+VARIATION DE LA DIFFICULTÉ
+
+La difficulté doit être variée et mélangée dans tout le QCM.
+- Environ 80 % des questions doivent être de difficulté standard 6e : connaissances, compréhension et applications directes.
+- Environ 20 % peuvent être de niveau « challenge » : elles demandent un peu plus de réflexion, de comparaison, de raisonnement ou de mise en relation de plusieurs éléments du cours.
+- Les questions « challenge » doivent rester totalement accessibles à un élève de 6e et utiliser uniquement les notions réellement enseignées.
+- Ne crée pas de pièges artificiels : la difficulté doit venir du raisonnement attendu, pas d'une formulation trompeuse.`;
+        const specialFormatsRule = `FORMATS DE QUESTIONS VARIÉS — JEOPARDY ET TRADUCTION
+
+Le QCM reste entièrement compatible avec le format à 4 choix A/B/C/D : une seule proposition est correcte à chaque fois.
+
+JEOPARDY — « TROUVE LA QUESTION »
+- Dans environ 10 % des questions, tu peux utiliser un format inspiré du Jeopardy : tu donnes d'abord une réponse ou un élément de réponse, et l'élève doit trouver la question qui correspond.
+- Dans ce cas, formule clairement l'énoncé, par exemple : « Réponse donnée : “...” — Quelle est la question correspondante ? »
+- Les quatre choix A/B/C/D doivent alors être quatre questions possibles, dont une seule correspond réellement à la réponse donnée.
+- Les mauvaises questions doivent être plausibles et porter sur des notions proches du cours.
+- Le format Jeopardy doit rester naturel pour la matière concernée et ne doit pas être utilisé si le cours fourni ne permet pas de construire une question fiable.
+
+TRADUCTIONS — ANGLAIS
+- Lorsque la matière est l'anglais, intègre ponctuellement des questions de traduction, mélangées aux autres questions.
+- Varie les deux directions : français → anglais ET anglais → français.
+- Pour les questions français → anglais, une seule proposition anglaise doit être correcte.
+- Pour les questions anglais → français, une seule proposition française doit être correcte.
+- Utilise uniquement le vocabulaire, les expressions et les structures réellement présents dans le cours fourni ou explicitement travaillés dans le chapitre.
+- Les distracteurs doivent être des traductions plausibles ou des erreurs classiques, pas des réponses absurdes.
+- Varie les deux directions de traduction au lieu de toujours utiliser la même.
+
+Ces formats spéciaux doivent rester minoritaires et être mélangés naturellement aux questions classiques. Ils ne remplacent jamais l'exigence d'un niveau 6e, d'une seule bonne réponse et du format A/B/C/D.`;
         const addRule = qcmEditingId ? `IMPORTANT — AJOUT À UN QCM EXISTANT
 
 Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions.
@@ -1576,6 +1597,8 @@ ${courseRule}
 ${distractorRule}
 
 ${mixRule}
+
+${specialFormatsRule}
 
 ${formatRule}
 
