@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+N re<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Révise ta 6e ! — Espace parent v154</title>
+    <title>Révise ta 6e ! — Espace parent v167</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
@@ -394,6 +394,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         <h2 id="qcm-modal-title">➕ Créer un QCM</h2>
         <div class="form-grid">
           <div class="field"><label for="qcm-type">Type</label><select id="qcm-type" onchange="adapterFormulaireQcm(); actualiserConsigneSiNecessaire()"><option value="SAVOIR">📘 Savoir</option><option value="SAVOIR_FAIRE">🛠️ Savoir-faire</option></select></div>
+          <div class="field"><label for="qcm-question-model">Format des questions</label><select id="qcm-question-model" onchange="actualiserConsigneSiNecessaire()"><option value="qcm">🔵 QCM — 4 choix</option><option value="vf">🟢 Vrai / Faux</option><option value="libre">🟠 Réponse libre</option></select></div>
           <div class="field"><label for="qcm-subject">Matière</label><select id="qcm-subject" onchange="annulerAjoutTaxonomieInline('category'); annulerAjoutTaxonomieInline('skill'); actualiserMenusSavoirFaire(); actualiserConsigneSiNecessaire()"></select></div>
           <div class="field"><label for="qcm-chapter">Chapitre</label><input id="qcm-chapter" oninput="actualiserConsigneSiNecessaire()" placeholder="Ex. Les accords dans le groupe nominal"></div>
           <div class="field" id="skill-category-field" style="display:none;"><label for="qcm-skill-category">Catégorie de savoir-faire</label><select id="qcm-skill-category" onchange="changementCategorieSavoirFaire()"><option value="">Choisir une catégorie…</option></select><button class="secondary taxonomy-inline-trigger" type="button" onclick="ouvrirAjoutTaxonomieInline('category')">➕ Ajouter une catégorie</button><div id="taxonomy-inline-category" class="taxonomy-inline-form" style="display:none;"><div class="taxonomy-inline-title">Nouvelle catégorie</div><div class="taxonomy-inline-grid"><div class="field"><label for="taxonomy-inline-category-name">Nom de la catégorie</label><input id="taxonomy-inline-category-name" placeholder="Ex. Lecture / compréhension"></div><div class="field"><label for="taxonomy-inline-category-color">Couleur</label><input id="taxonomy-inline-category-color" type="color" value="#2AA7D6"></div></div><div class="taxonomy-inline-actions"><button class="secondary" type="button" onclick="annulerAjoutTaxonomieInline('category')">Annuler</button><button class="primary" type="button" onclick="enregistrerTaxonomieInline('category')">💾 Enregistrer</button></div></div></div>
@@ -1372,6 +1373,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         qcmCreationMode = null;
         document.getElementById("qcm-modal-title").textContent = "➕ Créer un QCM";
         document.getElementById("qcm-type").value = "SAVOIR";
+        document.getElementById("qcm-question-model").value = "qcm";
         document.getElementById("qcm-chapter").value = "";
         document.getElementById("qcm-skill").value = ""; document.getElementById("qcm-skill").dataset.selected=""; document.getElementById("qcm-skill-category").value=""; document.getElementById("qcm-skill-category").dataset.selected="";
         document.getElementById("qcm-title").value = "";
@@ -1446,7 +1448,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
 
     function fermerQcmModal() {
         document.getElementById("qcm-modal").style.display = "none";
-        ["qcm-type","qcm-subject","qcm-chapter","qcm-skill-category","qcm-skill","qcm-title"].forEach(id => document.getElementById(id).disabled = false);
+        ["qcm-type","qcm-question-model","qcm-subject","qcm-chapter","qcm-skill-category","qcm-skill","qcm-title"].forEach(id => document.getElementById(id).disabled = false);
         document.querySelectorAll(".qcm-child").forEach(c => c.disabled = false);
         document.getElementById("mode-chatgpt-btn").style.display = "inline-block";
         document.getElementById("mode-manuel-btn").style.display = "inline-block";
@@ -1469,9 +1471,11 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         }
         preview.style.display="block";
         document.getElementById("save-qcm-btn").style.display = "inline-block";
-        preview.innerHTML = `<strong>✅ ${qcmParsedQuestions.length} question(s) détectée(s)</strong>` + qcmParsedQuestions.map((q,i)=>
-          `<div class='preview-item'><div class='preview-q'>${i+1}. ${escapeHtml(q.question)}</div><div class='preview-a'>A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)} · C. ${escapeHtml(q.c)} · D. ${escapeHtml(q.d)}<br><strong>Corrigé : ${q.answer}</strong>${q.explanation ? `<br><span>Explication : ${escapeHtml(q.explanation)}</span>` : ""}</div></div>`).join("");
+        preview.innerHTML = `<strong>✅ ${qcmParsedQuestions.length} question(s) détectée(s)</strong>` + qcmParsedQuestions.map((q,i)=> { const m=getQuestionModel(); const a=m==="vf"?`A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)}`:m==="libre"?`Réponse attendue : ${escapeHtml(q.a)}`:`A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)} · C. ${escapeHtml(q.c)} · D. ${escapeHtml(q.d)}`; return `<div class='preview-item'><div class='preview-q'>${i+1}. ${escapeHtml(q.question)}</div><div class='preview-a'>${a}<br><strong>Corrigé : ${q.answer}</strong>${q.explanation ? `<br><span>Explication : ${escapeHtml(q.explanation)}</span>` : ""}</div></div>`; }).join("");
     }
+
+    function getQuestionModel() { return document.getElementById("qcm-question-model")?.value || "qcm"; }
+    function questionModelLabel() { const m=getQuestionModel(); return m==="vf"?"VRAI / FAUX":m==="libre"?"RÉPONSE LIBRE":"QCM À 4 CHOIX"; }
 
     function construireConsigneChatGPT() {
         const type = document.getElementById("qcm-type").value === "SAVOIR_FAIRE" ? "SAVOIR-FAIRE" : "SAVOIR";
@@ -1499,7 +1503,37 @@ Si le cours fourni ne permet pas de justifier une explication, n'invente rien.`;
         if (!Number.isFinite(questionCount) || questionCount < 1) questionCount = 1;
         if (questionCount > 50) questionCount = 50;
         if (questionCountEl) questionCountEl.value = questionCount;
-        const formatRule = `IMPORTANT — FORMAT DE RÉPONSE
+        const model = getQuestionModel();
+        let formatRule;
+        if (model === "vf") {
+            formatRule = `IMPORTANT — FORMAT DE RÉPONSE : VRAI / FAUX
+
+Tu dois répondre uniquement avec le QCM, sans introduction, sans conclusion et sans commentaire supplémentaire.
+
+Pour permettre un copié-collé direct dans mon application, place l'intégralité du QCM dans UN SEUL bloc de code Markdown, et ne mets aucun texte avant ou après ce bloc.
+
+À l'intérieur de ce bloc, utilise exactement ce format :
+1. Affirmation
+A. Vrai
+B. Faux
+Corrigé : A — Explication : courte explication pédagogique adaptée à un élève de 6e.
+
+Il doit y avoir exactement ${questionCount} questions et une seule réponse correcte : Vrai ou Faux. Ne crée jamais de choix C ou D.`;
+        } else if (model === "libre") {
+            formatRule = `IMPORTANT — FORMAT DE RÉPONSE : RÉPONSE LIBRE
+
+Tu dois répondre uniquement avec le QCM, sans introduction, sans conclusion et sans commentaire supplémentaire.
+
+Pour permettre un copié-collé direct dans mon application, place l'intégralité du QCM dans UN SEUL bloc de code Markdown, et ne mets aucun texte avant ou après ce bloc.
+
+À l'intérieur de ce bloc, utilise exactement ce format :
+1. Question
+Réponse attendue : réponse courte et précise
+Corrigé : A — Explication : courte explication pédagogique adaptée à un élève de 6e.
+
+Il doit y avoir exactement ${questionCount} questions. N'ajoute aucun choix A/B/C/D.`;
+        } else {
+            formatRule = `IMPORTANT — FORMAT DE RÉPONSE : QCM À 4 CHOIX
 
 Tu dois répondre uniquement avec le QCM, sans introduction, sans conclusion et sans commentaire supplémentaire.
 
@@ -1513,12 +1547,9 @@ C. Réponse C
 D. Réponse D
 Corrigé : B — Explication : courte explication pédagogique adaptée à un élève de 6e.
 
-Puis recommence pour la question suivante.
-
 Il doit y avoir exactement ${questionCount} questions, exactement quatre choix A, B, C et D pour chaque question, et une seule bonne réponse.
-Vérifie attentivement que la lettre indiquée après « Corrigé : » correspond bien à la bonne réponse.
-
-Les explications sont facultatives : si une explication n'apporte rien ou ne peut pas être justifiée par le cours, indique simplement « Corrigé : X » sans inventer d'explication.`;
+Vérifie attentivement que la lettre indiquée après « Corrigé : » correspond bien à la bonne réponse.`;
+        }
         const mixRule = `CONTENU DU QCM
 
 Le QCM doit comporter à la fois des questions de cours permettant de vérifier les connaissances et la compréhension des notions, et des exercices d'application simples permettant de vérifier que l'élève sait utiliser les règles ou notions apprises.
@@ -1531,7 +1562,7 @@ Le QCM doit proposer une difficulté variée, tout en restant adapté à un él�
 - Lorsque le nombre de questions est suffisant, ajoute quelques questions légèrement plus difficiles de type « challenge » : elles peuvent demander de croiser deux notions du cours, de repérer une nuance ou d'appliquer une règle dans une situation un peu moins évidente.
 - Les questions « challenge » doivent rester totalement accessibles à un bon élève de 6e et ne doivent jamais introduire une notion de niveau supérieur.
 - Ne rends pas artificiellement les questions difficiles avec du vocabulaire compliqué ou des formulations piégeuses : la difficulté doit venir du raisonnement demandé, pas de la rédaction.`;
-        const distractorRule = `QUALITÉ DES MAUVAISES RÉPONSES
+        const distractorRule = model === "qcm" ? `QUALITÉ DES MAUVAISES RÉPONSES
 
 Les réponses incorrectes doivent être PLAUSIBLES et proches de la bonne réponse, afin de réellement tester les connaissances de l'élève.
 - Évite les réponses absurdes, manifestement fausses ou trop faciles à éliminer.
@@ -1539,13 +1570,15 @@ Les réponses incorrectes doivent être PLAUSIBLES et proches de la bonne répon
 - Les quatre propositions doivent être de longueur et de formulation comparables autant que possible.
 - Une seule réponse doit être objectivement correcte : ne crée aucune ambiguïté entre deux propositions.
 - Ne donne pas d'indice évident par la formulation, la longueur, le vocabulaire ou la précision de la bonne réponse.
-- Lorsque le cours est fourni, les mauvaises réponses doivent rester cohérentes avec les notions et le vocabulaire du cours, sans introduire de notions hors sujet.`;
+- Lorsque le cours est fourni, les mauvaises réponses doivent rester cohérentes avec les notions et le vocabulaire du cours, sans introduire de notions hors sujet.` : "";
         const ajoutRule = qcmEditingId ? `IMPORTANT — AJOUT À UN QCM EXISTANT
 
 Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions. Elles doivent rester dans la même matière, le même chapitre et le même savoir-faire éventuel. Évite les doublons et les reformulations trop proches des questions déjà présentes dans le QCM.` : "";
         return `${qcmEditingId ? `Ajoute des questions à un QCM existant de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.` : `Crée un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.`}
 
-${ajoutRule ? ajoutRule + "\n\n" : ""}Génère ${questionCount} questions à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question.
+${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
+
+Le format choisi est : ${questionModelLabel()}. Respecte strictement ce format pour toutes les questions.
 
 Le QCM doit être adapté à un élève de 6e et rester strictement dans les notions attendues à ce niveau.
 
@@ -1561,7 +1594,7 @@ ${formatRule}
 
 ${explanationRule}
 
-Contexte du QCM : type ${type}, matière ${mat}, chapitre ${ch}${skill ? `, savoir-faire ${skill}` : ""}.`;
+Contexte du QCM : type ${type}, matière ${mat}, chapitre ${ch}${skill ? `, savoir-faire ${skill}` : ""}, format ${questionModelLabel()}.`;
     }
 
     function togglePromptDetails() {
@@ -1619,7 +1652,12 @@ Contexte du QCM : type ${type}, matière ${mat}, chapitre ${ch}${skill ? `, savo
     }
 
     function formatGeneratedQuestions(list) {
-        return list.map((q,i)=>`${i+1}. ${q.question}\nA. ${q.a}\nB. ${q.b}\nC. ${q.c}\nD. ${q.d}\nCorrigé : ${q.answer}${q.explanation ? `\nExplication : ${q.explanation}` : ""}`).join("\n\n");
+        const m=getQuestionModel();
+        return list.map((q,i)=> {
+            if(m==="vf") return `${i+1}. ${q.question}\nA. Vrai\nB. Faux\nCorrigé : ${q.answer}${q.explanation?`\nExplication : ${q.explanation}`:""}`;
+            if(m==="libre") return `${i+1}. ${q.question}\nRéponse attendue : ${q.a}\nCorrigé : A${q.explanation?`\nExplication : ${q.explanation}`:""}`;
+            return `${i+1}. ${q.question}\nA. ${q.a}\nB. ${q.b}\nC. ${q.c}\nD. ${q.d}\nCorrigé : ${q.answer}${q.explanation?`\nExplication : ${q.explanation}`:""}`;
+        }).join("\n\n");
     }
 
     async function photoCoursSelectionnee(input) {
@@ -1651,43 +1689,32 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         if (!text) return [];
         const normalized = text.replace(/```(?:markdown|text)?/gi, "").replace(/```/g, "").replace(/\r/g, "").replace(/[：]/g, ":");
         const starts = [...normalized.matchAll(/(?:^|\n)\s*(?:Question\s*)?(\d+)[\.)]\s*/gi)];
-        const blocks = [];
-        if (starts.length) {
-            starts.forEach((m,i)=> blocks.push(normalized.slice(m.index + (m[0].startsWith("\n") ? 1 : 0), i+1<starts.length ? starts[i+1].index : normalized.length)));
-        } else {
-            blocks.push(...normalized.split(/\n\s*\n(?=\s*(?:Question\s*)?\d+[\.)])/i));
-        }
-        const out=[];
-        for (const block of blocks) {
-            const clean = block.trim();
-            if (!clean) continue;
-
-            // Corrigé/Réponse peut être suivi de l'explication sur la même ligne
-            // (« Corrigé : B — Explication : ... ») ou sur la ligne suivante.
-            const answerMatch = clean.match(/(?:^|\n)\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:\s*([ABCD])(?:\s*[—–-]\s*explication\s*:\s*([^\n]*))?\s*(?=\n|$)/i);
-            const answer = answerMatch ? answerMatch[1].toUpperCase() : "";
-            let explanation = answerMatch && answerMatch[2] ? answerMatch[2].trim() : "";
-
-            if (answerMatch && !explanation) {
-                const answerStart = answerMatch.index + (answerMatch[0].startsWith("\n") ? 1 : 0);
-                const afterAnswer = clean.slice(answerStart);
-                const nextLineExplanation = afterAnswer.match(/^[^\n]*\n\s*explication\s*:\s*([\s\S]*?)\s*$/i);
-                if (nextLineExplanation) explanation = nextLineExplanation[1].trim();
+        const blocks=[];
+        if(starts.length) starts.forEach((m,i)=>blocks.push(normalized.slice(m.index+(m[0].startsWith("\n")?1:0),i+1<starts.length?starts[i+1].index:normalized.length)));
+        else blocks.push(...normalized.split(/\n\s*\n(?=\s*(?:Question\s*)?\d+[\.)])/i));
+        const out=[]; const model=getQuestionModel();
+        for(const block of blocks){
+            const clean=block.trim(); if(!clean) continue;
+            const em=clean.match(/(?:^|\n)\s*explication\s*:\s*([\s\S]*?)\s*$/i); let explanation=em?em[1].trim():"";
+            if(model==="vf"){
+                const am=clean.match(/(?:^|\n)\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:\s*([AB])\b/i); const answer=am?am[1].toUpperCase():"";
+                const cm=[...clean.matchAll(/(?:^|\n)\s*([AB])[\.)\-:]\s*(.+?)(?=\n\s*[AB][\.)\-:]\s*|\n\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:|$)/gis)], choices={}; cm.forEach(m=>choices[m[1].toUpperCase()]=m[2].trim().replace(/\s+/g," "));
+                let qtext=clean.split(/\n\s*A[\.)\-:]\s*/i)[0].trim().replace(/^(?:Question\s*)?\d+[\.)]\s*/i,"").trim();
+                if(qtext&&answer&&choices.A&&choices.B) out.push({question:qtext,a:choices.A,b:choices.B,c:"",d:"",answer,explanation}); continue;
             }
-
-            explanation = explanation.replace(/^[—–-]\s*/, "").trim();
-
-            const choiceMatches = [...clean.matchAll(/(?:^|\n)\s*([ABCD])[\.)\-:]\s*(.+?)(?=\n\s*[ABCD][\.)\-:]\s*|\n\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:|$)/gis)];
-            const choices={};
-            choiceMatches.forEach(m=>choices[m[1].toUpperCase()]=m[2].trim().replace(/\s+/g," "));
-            if (!answer || !choices.A || !choices.B || !choices.C || !choices.D) continue;
-
-            let qtext = clean.split(/\n\s*A[\.)\-:]\s*/i)[0].trim();
-            qtext = qtext.replace(/^(?:Question\s*)?\d+[\.)]\s*/i, "").trim();
-            if (!qtext) continue;
-            out.push({question:qtext,a:choices.A,b:choices.B,c:choices.C,d:choices.D,answer,explanation});
-        }
-        return out;
+            if(model==="libre"){
+                const rm=clean.match(/(?:^|\n)\s*(?:r[ée]ponse\s+attendue|r[ée]ponse\s+correcte)\s*:\s*([^\n]+?)(?=\n\s*(?:corrig[ée]s?|explication)\s*:|$)/i);
+                const am=clean.match(/(?:^|\n)\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:\s*A\b/i);
+                let qtext=clean.split(/\n\s*(?:r[ée]ponse\s+attendue|r[ée]ponse\s+correcte)\s*:/i)[0].trim().replace(/^(?:Question\s*)?\d+[\.)]\s*/i,"").trim();
+                if(qtext&&rm&&am) out.push({question:qtext,a:rm[1].trim(),b:"",c:"",d:"",answer:"A",explanation}); continue;
+            }
+            const am=clean.match(/(?:^|\n)\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:\s*([ABCD])(?:\s*[—–-]\s*explication\s*:\s*([^\n]*))?\s*(?=\n|$)/i); const answer=am?am[1].toUpperCase():"";
+            if(am&&!explanation&&am[2]) explanation=am[2].trim();
+            const cm=[...clean.matchAll(/(?:^|\n)\s*([ABCD])[\.)\-:]\s*(.+?)(?=\n\s*[ABCD][\.)\-:]\s*|\n\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:|$)/gis)], choices={}; cm.forEach(m=>choices[m[1].toUpperCase()]=m[2].trim().replace(/\s+/g," "));
+            if(!answer||!choices.A||!choices.B||!choices.C||!choices.D) continue;
+            let qtext=clean.split(/\n\s*A[\.)\-:]\s*/i)[0].trim().replace(/^(?:Question\s*)?\d+[\.)]\s*/i,"").trim();
+            if(qtext) out.push({question:qtext,a:choices.A,b:choices.B,c:choices.C,d:choices.D,answer,explanation});
+        } return out;
     }
 
     async function ouvrirGestionQuestions(qcmId, title) {
