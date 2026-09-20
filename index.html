@@ -1893,9 +1893,11 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
             }
             // En mode mixte (et par sécurité dans les autres modes), détecte aussi le format réel du bloc.
             if(defaultModel==='mixte' && !typeTag){
-                if(/(?:^|\n)\s*r[ée]ponse\s+attendue\s*:/i.test(clean)) model='libre';
+                // Une traduction contient elle aussi « Réponse attendue ».
+                // On teste donc le corrigé T avant de la classer en réponse libre.
+                if(/(?:^|\n)\s*(?:corrig[ée]s?|réponse|bonne\s+réponse)\s*:\s*T\b/i.test(clean)) model='traduction';
+                else if(/(?:^|\n)\s*r[ée]ponse\s+attendue\s*:/i.test(clean)) model='libre';
                 else if(/(?:^|\n)\s*[AB][\.)\-:]\s*(?:Vrai|Faux)\s*$/im.test(clean) && !/(?:^|\n)\s*[CD][\.)\-:]/im.test(clean)) model='vf';
-                else if(/(?:^|\n)\s*(?:corrig[ée]s?|réponse|bonne\s+réponse)\s*:\s*T\b/i.test(clean)) model='traduction';
                 else model='qcm';
             }
             const em=clean.match(/(?:^|\n)\s*explication\s*:\s*([\s\S]*?)(?=\n\s*\[\s*Type\s*:|\n\s*(?:Question\s*)?\d+[\.)]\s*|$)/i); let explanation=em?em[1].trim():"";
