@@ -602,6 +602,68 @@ button:hover{opacity:.92;transform:translateY(-1px)}
 
 
     /* =========================================
+       CODE DE RECONNEXION — PIN ENFANT
+       ========================================= */
+    async function definirPinEnfant(nomEnfant, profileId){
+        const pin = window.prompt(
+            `Choisis le code de reconnexion à 4 chiffres pour ${nomEnfant} :`,
+            ""
+        );
+
+        if(pin === null)return;
+
+        const code = String(pin).trim();
+
+        if(!/^\d{4}$/.test(code)){
+            afficherMessage("Le code doit contenir exactement 4 chiffres.");
+            return;
+        }
+
+        const {data:sessionData,error:sessionError}=await supabaseClient.auth.getSession();
+
+        if(sessionError || !sessionData?.session){
+            afficherMessage("Session parent introuvable. Reconnecte-toi.");
+            return;
+        }
+
+        afficherMessage("Enregistrement du code de reconnexion…", true);
+
+        try{
+            const response=await fetch(
+                SUPABASE_URL+"/functions/v1/set-recovery-pin",
+                {
+                    method:"POST",
+                    headers:{
+                        "apikey":SUPABASE_PUBLISHABLE_KEY,
+                        "Authorization":"Bearer "+sessionData.session.access_token,
+                        "Content-Type":"application/json"
+                    },
+                    body:JSON.stringify({
+                        profile_id:profileId,
+                        pin:code
+                    })
+                }
+            );
+
+            const result=await response.json().catch(()=>({}));
+
+            if(!response.ok || !result.success){
+                afficherMessage(
+                    "Impossible d'enregistrer le code : "+
+                    (result.error || result.message || "Erreur inconnue")
+                );
+                return;
+            }
+
+            afficherMessage(`Code de reconnexion enregistré pour ${nomEnfant} ✅`);
+        }catch(error){
+            console.error(error);
+            afficherMessage("Impossible d'enregistrer le code de reconnexion.");
+        }
+    }
+
+
+    /* =========================================
        ENFANTS — ACTIVITÉ DÉTAILLÉE / JUMELAGE
        ========================================= */
     async function chargerEnfantsPairing(){
@@ -615,8 +677,10 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         enfants.forEach((enfant,index)=>{
             const card=document.createElement('div');card.className='child-card '+(index%2===0?'ainhoa':'louanne');
             const initial=(enfant.name||'?').trim().charAt(0).toUpperCase();const statusId='status-'+enfant.id;
-            card.innerHTML=`<div class="child-top"><div class="avatar ${index%2===0?'avatar-pink':'avatar-blue'}">${escapeHtml(initial)}</div><div><div class="child-name">${escapeHtml(enfant.name||'Enfant')}</div><div class="child-role">Élève de 6e</div></div></div><div id="${statusId}" class="status ${enfant.auth_user_id?'status-ok':'status-info'}">${enfant.auth_user_id?'✅ Téléphone déjà associé · réassociation possible':'📱 Téléphone à associer'}</div><button class="associate" type="button">${enfant.auth_user_id?'📱 Réassocier son téléphone':'📱 Associer son téléphone'}</button>`;
-            card.querySelector('.associate').addEventListener('click',()=>creerQR(enfant.name||'Enfant',enfant.id));box.appendChild(card);
+            card.innerHTML=`<div class="child-top"><div class="avatar ${index%2===0?'avatar-pink':'avatar-blue'}">${escapeHtml(initial)}</div><div><div class="child-name">${escapeHtml(enfant.name||'Enfant')}</div><div class="child-role">Élève de 6e</div></div></div><div id="${statusId}" class="status ${enfant.auth_user_id?'status-ok':'status-info'}">${enfant.auth_user_id?'✅ Téléphone déjà associé · réassociation possible':'📱 Téléphone à associer'}</div><button class="associate" type="button">${enfant.auth_user_id?'📱 Réassocier son téléphone':'📱 Associer son téléphone'}</button><button class="associate recovery-pin" type="button">🔐 Définir le code de reconnexion</button>`;
+            card.querySelector('.associate').addEventListener('click',()=>creerQR(enfant.name||'Enfant',enfant.id));
+            card.querySelector('.recovery-pin').addEventListener('click',()=>definirPinEnfant(enfant.name||'Enfant',enfant.id));
+            box.appendChild(card);
         });
     }
 
