@@ -394,7 +394,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         <h2 id="qcm-modal-title">➕ Créer un QCM</h2>
         <div class="form-grid">
           <div class="field"><label for="qcm-type">Type</label><select id="qcm-type" onchange="adapterFormulaireQcm(); actualiserConsigneSiNecessaire()"><option value="SAVOIR">📘 Savoir</option><option value="SAVOIR_FAIRE">🛠️ Savoir-faire</option></select></div>
-          <div class="field"><label for="qcm-question-model">Format des questions</label><select id="qcm-question-model" onchange="actualiserConsigneSiNecessaire()"><option value="qcm">🔵 QCM — 4 choix</option><option value="vf">🟢 Vrai / Faux</option><option value="libre">🟠 Réponse libre</option><option value="mixte">🟣 Mixte — QCM + Vrai/Faux + Réponse libre</option></select></div>
+          <div class="field"><label for="qcm-question-model">Format des questions</label><select id="qcm-question-model" onchange="actualiserConsigneSiNecessaire()"><option value="qcm">🔵 QCM — 4 choix</option><option value="vf">🟢 Vrai / Faux</option><option value="libre">🟠 Réponse libre</option><option value="traduction">🔷 Traduction FR ↔ EN</option><option value="mixte">🟣 Mixte — QCM + Vrai/Faux + Réponse libre</option></select></div>
           <div class="field"><label for="qcm-subject">Matière</label><select id="qcm-subject" onchange="annulerAjoutTaxonomieInline('category'); annulerAjoutTaxonomieInline('skill'); actualiserMenusSavoirFaire(); actualiserConsigneSiNecessaire()"></select></div>
           <div class="field"><label for="qcm-chapter">Chapitre</label><input id="qcm-chapter" oninput="actualiserConsigneSiNecessaire()" placeholder="Ex. Les accords dans le groupe nominal"></div>
           <div class="field" id="skill-category-field" style="display:none;"><label for="qcm-skill-category">Catégorie de savoir-faire</label><select id="qcm-skill-category" onchange="changementCategorieSavoirFaire()"><option value="">Choisir une catégorie…</option></select><button class="secondary taxonomy-inline-trigger" type="button" onclick="ouvrirAjoutTaxonomieInline('category')">➕ Ajouter une catégorie</button><div id="taxonomy-inline-category" class="taxonomy-inline-form" style="display:none;"><div class="taxonomy-inline-title">Nouvelle catégorie</div><div class="taxonomy-inline-grid"><div class="field"><label for="taxonomy-inline-category-name">Nom de la catégorie</label><input id="taxonomy-inline-category-name" placeholder="Ex. Lecture / compréhension"></div><div class="field"><label for="taxonomy-inline-category-color">Couleur</label><input id="taxonomy-inline-category-color" type="color" value="#2AA7D6"></div></div><div class="taxonomy-inline-actions"><button class="secondary" type="button" onclick="annulerAjoutTaxonomieInline('category')">Annuler</button><button class="primary" type="button" onclick="enregistrerTaxonomieInline('category')">💾 Enregistrer</button></div></div></div>
@@ -404,7 +404,7 @@ button:hover{opacity:.92;transform:translateY(-1px)}
           <div class="field full"><label>1️⃣ Comment veux-tu créer les questions ?</label><div class="qcm-toolbar"><button id="mode-chatgpt-btn" class="secondary" type="button" onclick="genererAvecChatGPT()">🤖 Générer avec ChatGPT</button><button id="mode-manuel-btn" class="secondary" type="button" onclick="choisirModeCreation('manuel')">✍️ Créer les questions manuellement</button></div></div>
           <div class="field full" id="chatgpt-mode-field" style="display:none;"><label>2️⃣ Générer les questions avec ChatGPT</label><div class="field" style="max-width:220px;"><label for="qcm-question-count">Nombre de questions</label><input id="qcm-question-count" type="number" min="1" max="50" value="15" inputmode="numeric" oninput="actualiserConsigneSiNecessaire()"></div><div class="qcm-toolbar"><button class="secondary" type="button" onclick="document.getElementById('qcm-photo-input').click()">📸 Ajouter des photos du cours</button><input id="qcm-photo-input" type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="photoCoursSelectionnee(this)"></div></div>
           <div class="field full" id="ai-prompt-field" style="display:none;"><label>2️⃣ Préparer la génération avec ChatGPT</label><div class="qcm-toolbar"><button class="primary" type="button" onclick="lancerGenerationChatGPT()">📋 Copier la consigne et ouvrir ChatGPT</button><button class="secondary" type="button" onclick="togglePromptDetails()">👁️ Voir la consigne</button></div><div id="ai-prompt-details" style="display:none;margin-top:10px;"><div id="ai-prompt-display" class="hint" style="max-height:150px;overflow:auto;white-space:pre-wrap;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafafa;"></div><textarea id="ai-prompt" style="display:none"></textarea></div><p id="ai-help" class="hint">La consigne est préparée automatiquement à partir de tes choix. Elle sera copiée puis ouverte dans ChatGPT.</p></div>
-          <div class="field full" id="manual-mode-field" style="display:none;"><label for="qcm-paste">2️⃣ Écrire ou coller les questions</label><textarea id="qcm-paste" placeholder="Écris ou colle ici tes questions, leurs corrigés et, si tu le souhaites, une explication."></textarea><p class="hint">La détection reconnaît les formats QCM, Vrai/Faux et Réponse libre. En mode mixte, tu peux indiquer le type avec « [Type: QCM] », « [Type: Vrai/Faux] » ou « [Type: Réponse libre] ».</p></div>
+          <div class="field full" id="manual-mode-field" style="display:none;"><label for="qcm-paste">2️⃣ Écrire ou coller les questions</label><textarea id="qcm-paste" placeholder="Écris ou colle ici tes questions, leurs corrigés et, si tu le souhaites, une explication."></textarea><p class="hint">La détection reconnaît les formats QCM, Vrai/Faux, Réponse libre et Traduction. En mode mixte, tu peux indiquer le type avec « [Type: QCM] », « [Type: Vrai/Faux] » ou « [Type: Réponse libre] ».</p></div>
           <div class="field full" id="generated-questions-field" style="display:none;"><label for="qcm-paste-generated">3️⃣ Questions + corrigés</label><textarea id="qcm-paste-generated" placeholder="Après avoir obtenu le QCM dans ChatGPT, reviens ici et colle uniquement le bloc du QCM."></textarea><p class="hint">Colle ici la réponse de ChatGPT. Les questions peuvent être ajoutées sans limite au QCM.</p></div>
           <div class="field full" id="analyze-field" style="display:none;"><button class="secondary" type="button" onclick="previsualiserQuestions()">🔎 Analyser les questions</button><div id="qcm-preview" class="preview" style="display:none;"></div></div>
         </div>
@@ -1513,11 +1513,11 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         }
         preview.style.display="block";
         document.getElementById("save-qcm-btn").style.display = "inline-block";
-        preview.innerHTML = `<strong>✅ ${qcmParsedQuestions.length} question(s) détectée(s)</strong>` + qcmParsedQuestions.map((q,i)=> { const m=q.model||getQuestionModel(); const a=m==="vf"?`A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)}`:m==="libre"?`Réponse attendue : ${escapeHtml(q.a)}`:`A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)} · C. ${escapeHtml(q.c)} · D. ${escapeHtml(q.d)}`; return `<div class='preview-item'><div class='preview-q'>${i+1}. <span class='pill'>${escapeHtml(questionModelLabelFor(m))}</span> ${escapeHtml(q.question)}</div><div class='preview-a'>${a}<br><strong>Corrigé : ${escapeHtml(q.answer)}</strong>${q.explanation ? `<br><span>Explication : ${escapeHtml(q.explanation)}</span>` : ""}</div></div>`; }).join("");
+        preview.innerHTML = `<strong>✅ ${qcmParsedQuestions.length} question(s) détectée(s)</strong>` + qcmParsedQuestions.map((q,i)=> { const m=q.model||getQuestionModel(); const a=m==="vf"?`A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)}`:(m==="libre"||m==="traduction")?`Réponse attendue : ${escapeHtml(q.a)}`:`A. ${escapeHtml(q.a)} · B. ${escapeHtml(q.b)} · C. ${escapeHtml(q.c)} · D. ${escapeHtml(q.d)}`; return `<div class='preview-item'><div class='preview-q'>${i+1}. <span class='pill'>${escapeHtml(questionModelLabelFor(m))}</span> ${escapeHtml(q.question)}</div><div class='preview-a'>${a}<br><strong>Corrigé : ${escapeHtml(q.answer)}</strong>${q.explanation ? `<br><span>Explication : ${escapeHtml(q.explanation)}</span>` : ""}</div></div>`; }).join("");
     }
 
     function getQuestionModel() { return document.getElementById("qcm-question-model")?.value || "qcm"; }
-    function questionModelLabel(model=getQuestionModel()) { return model==="vf"?"VRAI / FAUX":model==="libre"?"RÉPONSE LIBRE":model==="mixte"?"MIXTE": "QCM À 4 CHOIX"; }
+    function questionModelLabel(model=getQuestionModel()) { return model==="vf"?"VRAI / FAUX":model==="libre"?"RÉPONSE LIBRE":model==="traduction"?"TRADUCTION FR ↔ EN":model==="mixte"?"MIXTE": "QCM À 4 CHOIX"; }
     function questionModelLabelFor(m){ return questionModelLabel(m); }
 
     function construireConsigneChatGPT() {
@@ -1595,6 +1595,23 @@ B. Faux
 Corrigé : A — Explication : courte explication pédagogique adaptée à un élève de 6e.
 
 Il doit y avoir exactement ${questionCount} questions et une seule réponse correcte : Vrai ou Faux. Ne crée jamais de choix C ou D.`;
+        } else if (model === "traduction") {
+            formatRule = `IMPORTANT — FORMAT DE RÉPONSE : TRADUCTION FRANÇAIS ↔ ANGLAIS
+
+Tu dois créer des questions de traduction adaptées à un élève de 6e. Varie les deux sens : français → anglais et anglais → français.
+
+Pour permettre un copié-collé direct dans mon application, place l'intégralité du QCM dans UN SEUL bloc de code Markdown, sans texte avant ou après.
+
+À l'intérieur de ce bloc, utilise exactement ce format :
+1. Traduis en anglais : « bonjour »
+Réponse attendue : hello
+Corrigé : T — Explication : courte explication pédagogique adaptée à un élève de 6e.
+
+2. Traduis en français : « school »
+Réponse attendue : école
+Corrigé : T — Explication : courte explication pédagogique adaptée à un élève de 6e.
+
+Il doit y avoir exactement ${questionCount} questions. La réponse attendue peut être un mot ou une courte expression nécessaire à la traduction ; elle ne doit jamais être une phrase explicative. N'ajoute aucun choix A/B/C/D.`;
         } else if (model === "libre") {
             formatRule = `IMPORTANT — FORMAT DE RÉPONSE : RÉPONSE LIBRE
 
@@ -1652,7 +1669,7 @@ Les réponses incorrectes doivent être PLAUSIBLES et proches de la bonne répon
 Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions. Elles doivent rester dans la même matière, le même chapitre et le même savoir-faire éventuel. Évite les doublons et les reformulations trop proches des questions déjà présentes dans le QCM.` : "";
         return `${qcmEditingId ? `Ajoute des questions à un QCM existant de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.` : `Crée un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.`}
 
-${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : model === "mixte" ? "en mélangeant les trois formats : QCM, Vrai/Faux et réponse libre" : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
+${ajoutRule ? ajoutRule + "\n\n" : ""}Génère exactement ${questionCount} questions ${model === "vf" ? "de type Vrai / Faux" : model === "libre" ? "à réponse libre" : model === "traduction" ? "de traduction français ↔ anglais" : model === "mixte" ? "en mélangeant les trois formats : QCM, Vrai/Faux et réponse libre" : "à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question."}
 
 Le format choisi est : ${questionModelLabel()}. Respecte strictement ce format pour toutes les questions.
 
@@ -1737,6 +1754,7 @@ Contexte du QCM : type ${type}, matière ${mat}, chapitre ${ch}${skill ? `, savo
             const qm=m==='mixte'?(q.model||'qcm'):m;
             if(qm==="vf") return `[Type: Vrai/Faux]\n${i+1}. ${q.question}\nA. Vrai\nB. Faux\nCorrigé : ${q.answer}${q.explanation?`\nExplication : ${q.explanation}`:""}`;
             if(qm==="libre") return `[Type: Réponse libre]\n${i+1}. ${q.question}\nRéponse attendue : ${q.a}\nCorrigé : A${q.explanation?`\nExplication : ${q.explanation}`:""}`;
+            if(qm==="traduction") return `[Type: Traduction]\n${i+1}. ${q.question}\nRéponse attendue : ${q.a}\nCorrigé : T${q.explanation?`\nExplication : ${q.explanation}`:""}`;
             return `[Type: QCM]\n${i+1}. ${q.question}\nA. ${q.a}\nB. ${q.b}\nC. ${q.c}\nD. ${q.d}\nCorrigé : ${q.answer}${q.explanation?`\nExplication : ${q.explanation}`:""}`;
         }).join("\n\n");
     }
@@ -1787,6 +1805,7 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
             if(defaultModel==='mixte' && !typeTag){
                 if(/(?:^|\n)\s*r[ée]ponse\s+attendue\s*:/i.test(clean)) model='libre';
                 else if(/(?:^|\n)\s*[AB][\.)\-:]\s*(?:Vrai|Faux)\s*$/im.test(clean) && !/(?:^|\n)\s*[CD][\.)\-:]/im.test(clean)) model='vf';
+                else if(/(?:^|\n)\s*(?:corrig[ée]s?|réponse|bonne\s+réponse)\s*:\s*T\b/i.test(clean)) model='traduction';
                 else model='qcm';
             }
             const em=clean.match(/(?:^|\n)\s*explication\s*:\s*([\s\S]*?)(?=\n\s*\[\s*Type\s*:|\n\s*(?:Question\s*)?\d+[\.)]\s*|$)/i); let explanation=em?em[1].trim():"";
@@ -1795,6 +1814,12 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
                 const cm=[...clean.matchAll(/(?:^|\n)\s*([AB])[\.)\-:]\s*(.+?)(?=\n\s*[AB][\.)\-:]\s*|\n\s*(?:corrig[ée]s?|r[ée]ponse|bonne\s+r[ée]ponse)\s*:|$)/gis)], choices={}; cm.forEach(m=>choices[m[1].toUpperCase()]=m[2].trim().replace(/\s+/g," "));
                 let qtext=clean.split(/\n\s*A[\.)\-:]\s*/i)[0].trim().replace(/^(?:Question\s*)?\d+[\.)]\s*/i,"").trim();
                 if(qtext&&answer&&choices.A&&choices.B) out.push({model:'vf',question:qtext,a:choices.A,b:choices.B,c:"",d:"",answer,explanation}); continue;
+            }
+            if(model==='traduction'){
+                const rm=clean.match(/(?:^|\n)\s*(?:réponse\s+attendue|réponse\s+correcte)\s*:\s*([^\n]+?)(?=\n\s*(?:corrig[ée]s?|explication)\s*:|$)/i);
+                let qtext=clean.split(/\n\s*(?:réponse\s+attendue|réponse\s+correcte)\s*:/i)[0].trim().replace(/^(?:Question\s*)?\d+[\.)]\s*/i,"").trim();
+                const corr=clean.match(/(?:^|\n)\s*(?:corrig[ée]s?|réponse|bonne\s+réponse)\s*:\s*T\b/i);
+                if(qtext&&rm&&corr){ const attendu=rm[1].trim(); if(attendu && !/^[A-D]$/i.test(attendu)) out.push({model:'traduction',question:qtext,a:attendu,b:"",c:"",d:"",answer:"T",explanation}); continue; }
             }
             if(model==='libre'){
                 const rm=clean.match(/(?:^|\n)\s*(?:r[ée]ponse\s+attendue|r[ée]ponse\s+correcte)\s*:\s*([^\n]+?)(?=\n\s*(?:corrig[ée]s?|explication)\s*:|$)/i);
@@ -1830,13 +1855,15 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
             return;
         }
         box.innerHTML = data.map((q, i) => {
-            const model = storedQuestionModel(q.choice_a || "", q.choice_b || "", q.choice_c || "", q.choice_d || "");
+            const model = storedQuestionModel(q.choice_a || "", q.choice_b || "", q.choice_c || "", q.choice_d || "", q.correct_answer || "");
             const modelLabel = questionModelLabel(model);
             let answerHtml = "";
             if (model === "qcm") {
                 answerHtml = `A. ${escapeHtml(q.choice_a || "")}<br>B. ${escapeHtml(q.choice_b || "")}<br>C. ${escapeHtml(q.choice_c || "")}<br>D. ${escapeHtml(q.choice_d || "")}<br><strong>Bonne réponse : ${escapeHtml(q.correct_answer || "—")}</strong>`;
             } else if (model === "vf") {
                 answerHtml = `Choix : Vrai / Faux<br><strong>Bonne réponse : ${escapeHtml(q.correct_answer === "A" ? "Vrai" : q.correct_answer === "B" ? "Faux" : q.correct_answer || "—")}</strong>`;
+            } else if (model === "traduction") {
+                answerHtml = `Réponse attendue : <strong>${escapeHtml(q.choice_a || "")}</strong>`;
             } else {
                 answerHtml = `Réponse attendue : <strong>${escapeHtml(q.choice_a || "")}</strong>`;
             }
@@ -1860,17 +1887,19 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         document.getElementById("questions-modal").style.display = "none";
     }
 
-    function storedQuestionModel(a,b,c,d){
+    function storedQuestionModel(a,b,c,d,answer=""){
         const aa=String(a||"").trim().toLowerCase();
         const bb=String(b||"").trim().toLowerCase();
+        const corr=String(answer||"").trim().toUpperCase();
         if (!String(c||"").trim() && !String(d||"").trim() && aa && bb &&
             ((aa==="vrai" && bb==="faux") || (aa==="faux" && bb==="vrai"))) return "vf";
+        if (aa && !String(b||"").trim() && !String(c||"").trim() && !String(d||"").trim() && corr==="T") return "traduction";
         if (aa && !String(b||"").trim() && !String(c||"").trim() && !String(d||"").trim()) return "libre";
         return "qcm";
     }
 
     function editerQuestion(id, number, question, a, b, c, d, answer, explanation) {
-        const model = storedQuestionModel(a,b,c,d);
+        const model = storedQuestionModel(a,b,c,d,answer);
         const q = prompt("Énoncé de la question :", question);
         if (q === null) return;
         if (model === "vf") {
@@ -1881,6 +1910,14 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
             const corr = v === "vrai" ? "A" : "B";
             const exp = prompt("Explication (facultative) :", explanation || ""); if (exp === null) return;
             enregistrerModificationQuestion(id, number, q.trim(), "Vrai", "Faux", "", "", corr, exp.trim());
+            return;
+        }
+        if (model === "traduction") {
+            const attendu = prompt("Traduction attendue :", a);
+            if (attendu === null) return;
+            if (!attendu.trim()) { afficherQcmMessage("La traduction attendue ne peut pas être vide."); return; }
+            const exp = prompt("Explication (facultative) :", explanation || ""); if (exp === null) return;
+            enregistrerModificationQuestion(id, number, q.trim(), attendu.trim(), "", "", "", "T", exp.trim());
             return;
         }
         if (model === "libre") {
@@ -1904,9 +1941,10 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
     }
 
     async function enregistrerModificationQuestion(id, number, question, a, b, c, d, answer, explanation) {
-        const model = storedQuestionModel(a,b,c,d);
+        const model = storedQuestionModel(a,b,c,d,answer);
         if (!question || !a || (model === "qcm" && (!b || !c || !d))) { afficherQcmMessage(model === "qcm" ? "Tous les choix A, B, C et D doivent être remplis." : "La question et la réponse attendue doivent être remplies."); return; }
         if (model === "vf" && (!b || !["A","B"].includes(answer))) { afficherQcmMessage("Une question Vrai/Faux doit avoir les choix Vrai/Faux et un corrigé valide."); return; }
+        if (model === "traduction") { a = a.trim(); if (!a || /\s{3,}/.test(a)) { afficherQcmMessage("La traduction attendue ne peut pas être vide."); return; } b = ""; c = ""; d = ""; answer = "T"; }
         if (model === "libre") { a = a.trim(); if (!isSingleWordAnswer(a)) { afficherQcmMessage("La réponse attendue doit être un seul mot, jamais une phrase."); return; } b = ""; c = ""; d = ""; answer = "A"; }
         const { error } = await supabaseClient.from("questions").update({
             question_text: question, choice_a: a, choice_b: b, choice_c: c, choice_d: d,
