@@ -860,8 +860,6 @@ button:hover{opacity:.92;transform:translateY(-1px)}
     let qcmEditingId = null;
     let qcmParsedQuestions = [];
     let qcmCreationMode = null;
-    let qcmEditingContext = null;
-    let qcmExistingQuestions = [];
     let childProfiles = [];
 
     function afficherQcmMessage(texte, succes=false) {
@@ -1370,8 +1368,6 @@ button:hover{opacity:.92;transform:translateY(-1px)}
 
     async function ouvrirCreationQcm() {
         qcmEditingId = null;
-        qcmEditingContext = null;
-        qcmExistingQuestions = [];
         qcmParsedQuestions = [];
         qcmCreationMode = null;
         document.getElementById("qcm-modal-title").textContent = "➕ Créer un QCM";
@@ -1400,42 +1396,31 @@ button:hover{opacity:.92;transform:translateY(-1px)}
     }
 
     async function ouvrirAjoutQuestions(id, title) {
-        const asked = prompt("Combien de questions veux-tu ajouter ?", "5");
-        if (asked === null) return;
-        let wanted = parseInt(asked, 10);
-        if (!Number.isFinite(wanted) || wanted < 1) {
-            afficherQcmMessage("Indique un nombre de questions supérieur à 0.");
-            return;
-        }
-        wanted = Math.min(50, wanted);
-
         qcmEditingId = id;
         qcmParsedQuestions = [];
-        qcmExistingQuestions = [];
-        qcmCreationMode = "chatgpt";
+        qcmCreationMode = null;
+        document.getElementById("qcm-modal-title").textContent = "➕ Ajouter des questions à « " + title + " »";
+        document.getElementById("qcm-paste").value = "";
+        document.getElementById("qcm-paste-generated").value = "";
+        document.getElementById("qcm-preview").style.display = "none";
+        document.getElementById("save-qcm-btn").style.display = "none";
 
+        // Recharge les informations du QCM existant afin que la consigne ChatGPT
+        // conserve exactement la même matière, le même chapitre et le même type.
         const { data:qcm, error:qcmError } = await supabaseClient.from("qcms")
-            .select("id,title,subject_id,chapter,qcm_type,skill_name")
+            .select("id,title,chapter,qcm_type,skill_name,subject_id")
             .eq("id", id).single();
         if (qcmError || !qcm) {
             afficherQcmMessage("Impossible de charger le QCM : " + (qcmError?.message || "QCM introuvable"));
             return;
         }
-        qcmEditingContext = qcm;
-
-        const { data:existing, error:existingError } = await supabaseClient.from("questions")
-            .select("question_text").eq("qcm_id", id).order("question_number", {ascending:true});
-        if (!existingError) qcmExistingQuestions = (existing || []).map(x => x.question_text).filter(Boolean);
-
-        document.getElementById("qcm-modal-title").textContent = "➕ Ajouter " + wanted + " question(s) à « " + title + " »";
-        document.getElementById("qcm-question-count").value = wanted;
         document.getElementById("qcm-type").value = qcm.qcm_type || "SAVOIR";
         document.getElementById("qcm-subject").value = qcm.subject_id || "";
         document.getElementById("qcm-chapter").value = qcm.chapter || "";
-        document.getElementById("qcm-title").value = qcm.title || title;
-        document.getElementById("qcm-paste").value = "";
-        document.getElementById("qcm-paste-generated").value = "";
-        document.getElementById("qcm-preview").style.display = "none";
+        document.getElementById("qcm-skill").value = qcm.skill_name || "";
+        document.getElementById("qcm-title").value = qcm.title || title || "";
+        const countEl = document.getElementById("qcm-question-count");
+        if (countEl) countEl.value = 5;
 
         document.getElementById("qcm-type").disabled = true;
         document.getElementById("qcm-subject").disabled = true;
@@ -1444,16 +1429,23 @@ button:hover{opacity:.92;transform:translateY(-1px)}
         document.getElementById("qcm-skill-category").disabled = true;
         document.getElementById("qcm-title").disabled = true;
         document.querySelectorAll(".qcm-child").forEach(c => c.disabled = true);
+
+        // Pour un QCM existant, on peut désormais ajouter des questions
+        // manuellement OU en demandant à ChatGPT le nombre souhaité.
         document.getElementById("mode-chatgpt-btn").style.display = "inline-block";
         document.getElementById("mode-manuel-btn").style.display = "inline-block";
+        document.getElementById("mode-chatgpt-btn").className = "secondary";
+        document.getElementById("mode-manuel-btn").className = "secondary";
+        document.getElementById("chatgpt-mode-field").style.display = "none";
+        document.getElementById("manual-mode-field").style.display = "none";
+        document.getElementById("ai-prompt-field").style.display = "none";
+        document.getElementById("generated-questions-field").style.display = "none";
+        document.getElementById("analyze-field").style.display = "none";
         document.getElementById("qcm-modal").style.display = "flex";
-        choisirModeCreation("chatgpt");
     }
 
     function fermerQcmModal() {
         document.getElementById("qcm-modal").style.display = "none";
-        qcmEditingContext = null;
-        qcmExistingQuestions = [];
         ["qcm-type","qcm-subject","qcm-chapter","qcm-skill-category","qcm-skill","qcm-title"].forEach(id => document.getElementById(id).disabled = false);
         document.querySelectorAll(".qcm-child").forEach(c => c.disabled = false);
         document.getElementById("mode-chatgpt-btn").style.display = "inline-block";
@@ -1482,12 +1474,11 @@ button:hover{opacity:.92;transform:translateY(-1px)}
     }
 
     function construireConsigneChatGPT() {
-        const typeValue = qcmEditingContext?.qcm_type || document.getElementById("qcm-type").value;
-        const type = typeValue === "SAVOIR_FAIRE" ? "SAVOIR-FAIRE" : "SAVOIR";
+        const type = document.getElementById("qcm-type").value === "SAVOIR_FAIRE" ? "SAVOIR-FAIRE" : "SAVOIR";
         const subjectSelect = document.getElementById("qcm-subject");
         const mat = subjectSelect.selectedOptions[0]?.text?.trim() || "";
-        const ch = qcmEditingContext?.chapter || document.getElementById("qcm-chapter").value.trim();
-        const skill = qcmEditingContext?.skill_name || document.getElementById("qcm-skill").value.trim();
+        const ch = document.getElementById("qcm-chapter").value.trim();
+        const skill = document.getElementById("qcm-skill").value.trim();
         const courseRule = `IMPORTANT — UTILISATION DU COURS FOURNI
 
 Si je te fournis une ou plusieurs photos du cours, un document, un texte de cours ou des éléments de cours, tu dois impérativement t'appuyer sur ce contenu comme source principale et de référence.
@@ -1528,46 +1519,33 @@ Il doit y avoir exactement ${questionCount} questions, exactement quatre choix A
 Vérifie attentivement que la lettre indiquée après « Corrigé : » correspond bien à la bonne réponse.
 
 Les explications sont facultatives : si une explication n'apporte rien ou ne peut pas être justifiée par le cours, indique simplement « Corrigé : X » sans inventer d'explication.`;
-        const distractorRule = `QUALITÉ DES MAUVAISES RÉPONSES
-
-Les mauvaises réponses doivent être plausibles et proches de la bonne réponse, sans être absurdes ni manifestement fausses.
-- Construis des distracteurs qui pourraient réellement piéger un élève de 6e ayant une confusion ou une erreur classique.
-- Lorsque c'est pertinent, utilise des erreurs fréquentes, des notions voisines, des valeurs proches ou des formulations qui ressemblent à la bonne réponse.
-- Évite les réponses trop faciles à éliminer simplement parce qu'elles sont hors sujet, beaucoup trop longues ou manifestement incohérentes.
-- Une seule réponse doit être réellement correcte : les distracteurs doivent rester faux au regard du cours fourni.
-
-HUMOUR ET RÉFÉRENCES DE LA GÉNÉRATION DES ÉLÈVES
-Dans environ 15 % des questions, tu peux remplacer une des mauvaises réponses par une réponse fausse humoristique, pensée pour des élèves français de 6e.
-- Utilise ponctuellement des références réellement connues de leur génération : memes, trends TikTok/YouTube, expressions de collégiens, situations du quotidien et références virales actuelles comme « six seven », si elles sont pertinentes.
-- Le ton peut être légèrement familier et complice, mais reste adapté à l'école.
-- Les références doivent être compréhensibles par des préadolescents français aujourd'hui.
-- Pas de vulgarité, d'insultes, de contenu adulte ou de référence politique.
-- Ne mets pas une référence humoristique dans toutes les questions et ne répète pas systématiquement la même référence.
-- L'humour doit rester une petite surprise et ne doit jamais créer d'ambiguïté sur la bonne réponse.
-- Les autres mauvaises réponses restent sérieuses, plausibles et pédagogiquement utiles.
-- N'invente pas de fausses tendances présentées comme populaires.`;
         const mixRule = `CONTENU DU QCM
 
 Le QCM doit comporter à la fois des questions de cours permettant de vérifier les connaissances et la compréhension des notions, et des exercices d'application simples permettant de vérifier que l'élève sait utiliser les règles ou notions apprises.
 Les exercices d'application doivent rester adaptés à un élève de 6e et directement liés au contenu enseigné.`;
-        const addRule = qcmEditingId ? `IMPORTANT — AJOUT À UN QCM EXISTANT
+        const distractorRule = `QUALITÉ DES MAUVAISES RÉPONSES
 
-Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions.
-Ne reprends pas et ne reformule pas les questions déjà présentes dans le QCM.
-${qcmExistingQuestions.length ? `Questions déjà présentes à ne pas dupliquer :\n- ${qcmExistingQuestions.join("\n- ")}` : ""}
-` : "";
-        return `${qcmEditingId ? `Ajoute des questions à` : `Crée`} un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.
+Les réponses incorrectes doivent être PLAUSIBLES et proches de la bonne réponse, afin de réellement tester les connaissances de l'élève.
+- Évite les réponses absurdes, manifestement fausses ou trop faciles à éliminer.
+- Construis les distracteurs à partir d'erreurs fréquentes, de confusions possibles, de notions proches ou de formulations crédibles pour un élève de 6e.
+- Les quatre propositions doivent être de longueur et de formulation comparables autant que possible.
+- Une seule réponse doit être objectivement correcte : ne crée aucune ambiguïté entre deux propositions.
+- Ne donne pas d'indice évident par la formulation, la longueur, le vocabulaire ou la précision de la bonne réponse.
+- Lorsque le cours est fourni, les mauvaises réponses doivent rester cohérentes avec les notions et le vocabulaire du cours, sans introduire de notions hors sujet.`;
+        const ajoutRule = qcmEditingId ? `IMPORTANT — AJOUT À UN QCM EXISTANT
 
-${addRule}
-Génère ${questionCount} questions à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question.
+Tu ajoutes des questions à un QCM qui existe déjà. Crée exactement ${questionCount} NOUVELLES questions. Elles doivent rester dans la même matière, le même chapitre et le même savoir-faire éventuel. Évite les doublons et les reformulations trop proches des questions déjà présentes dans le QCM.` : "";
+        return `${qcmEditingId ? `Ajoute des questions à un QCM existant de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.` : `Crée un QCM de niveau 6e de type ${type} en ${mat}, sur le chapitre « ${ch} »${skill ? `, avec le savoir-faire « ${skill} »` : ""}.`}
+
+${ajoutRule ? ajoutRule + "\n\n" : ""}Génère ${questionCount} questions à 4 réponses possibles (A, B, C, D), avec une seule bonne réponse par question.
 
 Le QCM doit être adapté à un élève de 6e et rester strictement dans les notions attendues à ce niveau.
 
 ${courseRule}
 
-${distractorRule}
-
 ${mixRule}
+
+${distractorRule}
 
 ${formatRule}
 
