@@ -1825,28 +1825,68 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
             box.innerHTML = "<p>Aucune question dans ce QCM.</p>";
             return;
         }
-        box.innerHTML = data.map((q, i) => `
+        box.innerHTML = data.map((q, i) => {
+            const model = storedQuestionModel(q.choice_a || "", q.choice_b || "", q.choice_c || "", q.choice_d || "");
+            const modelLabel = questionModelLabel(model);
+            let answerHtml = "";
+            if (model === "qcm") {
+                answerHtml = `A. ${escapeHtml(q.choice_a || "")}<br>B. ${escapeHtml(q.choice_b || "")}<br>C. ${escapeHtml(q.choice_c || "")}<br>D. ${escapeHtml(q.choice_d || "")}<br><strong>Bonne réponse : ${escapeHtml(q.correct_answer || "—")}</strong>`;
+            } else if (model === "vf") {
+                answerHtml = `Choix : Vrai / Faux<br><strong>Bonne réponse : ${escapeHtml(q.correct_answer === "A" ? "Vrai" : q.correct_answer === "B" ? "Faux" : q.correct_answer || "—")}</strong>`;
+            } else {
+                answerHtml = `Réponse attendue : <strong>${escapeHtml(q.choice_a || "")}</strong>`;
+            }
+            return `
           <article class="qcm-card" style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-              <strong>Question ${i + 1}</strong>
+              <strong>Question ${i + 1} <span class="pill">${escapeHtml(modelLabel)}</span></strong>
               <div class="qcm-actions">
                 <button class="secondary" type="button" onclick='editerQuestion(${JSON.stringify(q.id)}, ${JSON.stringify(q.question_number)}, ${JSON.stringify(q.question_text || "")}, ${JSON.stringify(q.choice_a || "")}, ${JSON.stringify(q.choice_b || "")}, ${JSON.stringify(q.choice_c || "")}, ${JSON.stringify(q.choice_d || "")}, ${JSON.stringify(q.correct_answer || "")}, ${JSON.stringify(q.explanation || "")})'>✏️ Modifier</button>
                 <button class="danger" type="button" onclick='supprimerQuestion(${JSON.stringify(q.id)}, ${JSON.stringify(q.question_number)}, ${JSON.stringify(qcmId)}, ${JSON.stringify(title)})'>🗑️ Supprimer</button>
               </div>
             </div>
             <p><strong>${escapeHtml(q.question_text || "")}</strong></p>
-            <div class="hint">A. ${escapeHtml(q.choice_a || "")}<br>B. ${escapeHtml(q.choice_b || "")}<br>C. ${escapeHtml(q.choice_c || "")}<br>D. ${escapeHtml(q.choice_d || "")}</div>
-            <p><strong>Corrigé :</strong> ${escapeHtml(q.correct_answer || "—")}${q.explanation ? `<br><strong>Explication :</strong> ${escapeHtml(q.explanation)}` : ""}</p>
-          </article>`).join("");
+            <div class="hint">${answerHtml}</div>
+            ${q.explanation ? `<p><strong>Explication :</strong> ${escapeHtml(q.explanation)}</p>` : ""}
+          </article>`;
+        }).join("");
     }
 
     function fermerGestionQuestions() {
         document.getElementById("questions-modal").style.display = "none";
     }
 
+    function storedQuestionModel(a,b,c,d){
+        const aa=String(a||"").trim().toLowerCase();
+        const bb=String(b||"").trim().toLowerCase();
+        if (!String(c||"").trim() && !String(d||"").trim() && aa && bb &&
+            ((aa==="vrai" && bb==="faux") || (aa==="faux" && bb==="vrai"))) return "vf";
+        if (aa && !String(b||"").trim() && !String(c||"").trim() && !String(d||"").trim()) return "libre";
+        return "qcm";
+    }
+
     function editerQuestion(id, number, question, a, b, c, d, answer, explanation) {
+        const model = storedQuestionModel(a,b,c,d);
         const q = prompt("Énoncé de la question :", question);
         if (q === null) return;
+        if (model === "vf") {
+            const bonne = prompt("Bonne réponse : écris Vrai ou Faux", answer === "A" ? "Vrai" : answer === "B" ? "Faux" : "Vrai");
+            if (bonne === null) return;
+            const v = bonne.trim().toLowerCase();
+            if (v !== "vrai" && v !== "faux") { afficherQcmMessage("La bonne réponse doit être Vrai ou Faux."); return; }
+            const corr = v === "vrai" ? "A" : "B";
+            const exp = prompt("Explication (facultative) :", explanation || ""); if (exp === null) return;
+            enregistrerModificationQuestion(id, number, q.trim(), "Vrai", "Faux", "", "", corr, exp.trim());
+            return;
+        }
+        if (model === "libre") {
+            const attendu = prompt("Réponse attendue :", a);
+            if (attendu === null) return;
+            if (!attendu.trim()) { afficherQcmMessage("La réponse attendue ne peut pas être vide."); return; }
+            const exp = prompt("Explication (facultative) :", explanation || ""); if (exp === null) return;
+            enregistrerModificationQuestion(id, number, q.trim(), attendu.trim(), "", "", "", "A", exp.trim());
+            return;
+        }
         const qa = prompt("Réponse A :", a); if (qa === null) return;
         const qb = prompt("Réponse B :", b); if (qb === null) return;
         const qc = prompt("Réponse C :", c); if (qc === null) return;
@@ -1859,7 +1899,10 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
     }
 
     async function enregistrerModificationQuestion(id, number, question, a, b, c, d, answer, explanation) {
-        if (!question || !a || !b || !c || !d) { afficherQcmMessage("Tous les champs de la question doivent être remplis."); return; }
+        const model = storedQuestionModel(a,b,c,d);
+        if (!question || !a || (model === "qcm" && (!b || !c || !d))) { afficherQcmMessage(model === "qcm" ? "Tous les choix A, B, C et D doivent être remplis." : "La question et la réponse attendue doivent être remplies."); return; }
+        if (model === "vf" && (!b || !["A","B"].includes(answer))) { afficherQcmMessage("Une question Vrai/Faux doit avoir les choix Vrai/Faux et un corrigé valide."); return; }
+        if (model === "libre") { a = a.trim(); b = ""; c = ""; d = ""; answer = "A"; }
         const { error } = await supabaseClient.from("questions").update({
             question_text: question, choice_a: a, choice_b: b, choice_c: c, choice_d: d,
             correct_answer: answer, explanation: explanation || ""
