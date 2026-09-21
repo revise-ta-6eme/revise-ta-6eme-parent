@@ -468,7 +468,10 @@ button:hover{opacity:.92;transform:translateY(-1px)}
             {
                 auth: {
                     persistSession: true,
-                    autoRefreshToken: true
+                    autoRefreshToken: true,
+                    detectSessionInUrl: false,
+                    storage: window.localStorage,
+                    storageKey: "revise-ta-6eme-parent-auth"
                 }
             }
         );
@@ -2229,36 +2232,73 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
 
     /* =========================================
        RESTAURATION AUTOMATIQUE DE LA SESSION PARENT
-       V176
+       V177
        ========================================= */
+    let restaurationSessionEnCours = false;
+
+    async function afficherInterfaceParentConnecte() {
+        if (restaurationSessionEnCours) return;
+        restaurationSessionEnCours = true;
+
+        try {
+            document.getElementById('connexion-card').style.display = 'none';
+            document.getElementById('message').style.display = 'none';
+
+            await initialiserParentQcms();
+            await initialiserDashboard();
+            await chargerEnfantsDetail();
+            await chargerEnfantsPairing();
+            showParentView('dashboard');
+        } catch (e) {
+            console.error('Erreur restauration interface parent', e);
+        } finally {
+            restaurationSessionEnCours = false;
+        }
+    }
+
     async function restaurerSessionParent() {
         try {
+            // Supabase restaure d'abord la session stockée dans localStorage.
             const { data, error } = await supabaseClient.auth.getSession();
 
             if (error) {
                 console.error('Erreur récupération session parent', error);
+                document.getElementById('connexion-card').style.display = 'block';
                 return;
             }
 
-            // Si Supabase a conservé la session, on restaure directement
-            // l'interface parent au lieu d'afficher à nouveau l'écran de connexion.
             if (data && data.session) {
-                document.getElementById('connexion-card').style.display = 'none';
-                document.getElementById('message').style.display = 'none';
-
-                await initialiserParentQcms();
-                await initialiserDashboard();
-                await chargerEnfantsDetail();
-                await chargerEnfantsPairing();
-                showParentView('dashboard');
+                await afficherInterfaceParentConnecte();
+            } else {
+                document.getElementById('connexion-card').style.display = 'block';
             }
         } catch (e) {
             console.error('Impossible de restaurer la session parent', e);
+            document.getElementById('connexion-card').style.display = 'block';
         }
     }
 
-    // Au rechargement de la page, Supabase conserve la session.
-    // On la réutilise automatiquement pour éviter une reconnexion manuelle.
+    // Gestionnaire de sécurité : après un rechargement, on attend aussi
+    // l'événement INITIAL_SESSION de Supabase avant de conclure qu'il n'y a
+    // plus de session.
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'INITIAL_SESSION') {
+            if (session) {
+                await afficherInterfaceParentConnecte();
+            }
+            return;
+        }
+
+        if (event === 'SIGNED_IN' && session) {
+            await afficherInterfaceParentConnecte();
+        }
+
+        if (event === 'SIGNED_OUT') {
+            restaurationSessionEnCours = false;
+            document.getElementById('connexion-card').style.display = 'block';
+        }
+    });
+
     document.addEventListener('DOMContentLoaded', restaurerSessionParent);
 </script>
 
