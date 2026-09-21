@@ -2226,6 +2226,40 @@ Je vais joindre ${count} photo(s) de cours dans ChatGPT. Utilise uniquement leur
         }catch(e){content.innerHTML='<div class="dashboard-error">Impossible de charger les contrôles : '+dashboardEsc(e.message||e)+'</div>';}
     }
     function fermerControlesDashboard(){document.getElementById('controls-modal').style.display='none';}
+
+    /* =========================================
+       RESTAURATION AUTOMATIQUE DE LA SESSION PARENT
+       V176
+       ========================================= */
+    async function restaurerSessionParent() {
+        try {
+            const { data, error } = await supabaseClient.auth.getSession();
+
+            if (error) {
+                console.error('Erreur récupération session parent', error);
+                return;
+            }
+
+            // Si Supabase a conservé la session, on restaure directement
+            // l'interface parent au lieu d'afficher à nouveau l'écran de connexion.
+            if (data && data.session) {
+                document.getElementById('connexion-card').style.display = 'none';
+                document.getElementById('message').style.display = 'none';
+
+                await initialiserParentQcms();
+                await initialiserDashboard();
+                await chargerEnfantsDetail();
+                await chargerEnfantsPairing();
+                showParentView('dashboard');
+            }
+        } catch (e) {
+            console.error('Impossible de restaurer la session parent', e);
+        }
+    }
+
+    // Au rechargement de la page, Supabase conserve la session.
+    // On la réutilise automatiquement pour éviter une reconnexion manuelle.
+    document.addEventListener('DOMContentLoaded', restaurerSessionParent);
 </script>
 
 </body>
